@@ -1,0 +1,30 @@
+spring:
+  application:
+    name:
+  web:
+    error:
+      include-stacktrace:
+  # MySQL
+  datasource:
+    url:
+    username:
+    password:
+    driver-class-name:
+
+# MyBatis
+mybatis:
+  mapper-locations:
+  type-aliases-package:
+
+# Log
+logging:
+  file:
+    # 로그 파일 경로
+    name:
+  level:
+    # 로그 출력 레벨 설정 (trace, debug, info, warn, error)
+    root:
+
+    # 특정 패키지만 로그 출력 레벨 설정
+    com.msa4meerkatgram.controllers:
+
