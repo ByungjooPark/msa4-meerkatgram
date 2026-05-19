@@ -1,0 +1,9 @@
+CREATE TABLE `posts` (
+    `id`             BIGINT UNSIGNED PRIMARY KEY NOT NULL AUTO_INCREMENT
+    ,`user_id`       BIGINT UNSIGNED NOT NULL
+    ,`content`       VARCHAR(200) NOT NULL
+    ,`image`         VARCHAR(100) NOT NULL
+    ,`created_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP()
+    ,`updated_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP()
+    ,`deleted_at`    DATETIME DEFAULT NULL
+);
