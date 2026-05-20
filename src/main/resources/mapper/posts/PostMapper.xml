@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.msa4meerkatgram.domain.post.mapper.PostMapper">
+    <resultMap id="postResultMap" type="com.msa4meerkatgram.domain.post.entities.Post">
+        <id column="id" property="id" />
+        <result column="user_id" property="userId" />
+        <result column="content" property="content" />
+        <result column="image" property="image" />
+        <result column="created_at" property="createdAt" />
+        <result column="updated_at" property="updatedAt" />
+        <result column="deleted_at" property="deletedAt" />
+    </resultMap>
+
+    <select id="getPagination" resultMap="postResultMap" >
+        SELECT
+            *
+        FROM posts
+        WHERE
+            deleted_at IS NULL
+        ORDER BY
+            created_at DESC, id ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="getTotal">
+        SELECT
+            COUNT(*)
+        FROM posts
+        WHERE
+            deleted_at IS NULL
+    </select>
+</mapper>
