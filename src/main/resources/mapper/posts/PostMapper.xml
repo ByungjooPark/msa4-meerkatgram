@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.msa4meerkatgram.domain.post.mapper.PostMapper">
-    <resultMap id="postResultMap" type="com.msa4meerkatgram.domain.post.entities.Post">
+    <resultMap id="PostResultMap" type="com.msa4meerkatgram.domain.post.entities.Post">
         <id column="id" property="id" />
         <result column="user_id" property="userId" />
         <result column="content" property="content" />
@@ -14,14 +14,14 @@
         <result column="deleted_at" property="deletedAt" />
     </resultMap>
 
-    <select id="getPagination" resultMap="postResultMap" >
+    <select id="getPagination" resultMap="PostResultMap" >
         SELECT
             *
         FROM posts
         WHERE
             deleted_at IS NULL
         ORDER BY
-            created_at DESC, id ASC
+            created_at DESC, id
         LIMIT #{offset}, #{limit}
     </select>
 
@@ -32,4 +32,48 @@
         WHERE
             deleted_at IS NULL
     </select>
+
+    <select id="findByPk" resultMap="PostResultMap">
+        SELECT
+            posts.*
+             ,users.nick
+             ,users.email
+             ,users.profile
+        FROM posts
+                 JOIN users
+                      ON posts.user_id = users.id
+        WHERE
+            posts.deleted_at IS NULL
+          AND posts.id = #{id}
+    </select>
+
+    <insert
+        id="create"
+        parameterType="com.msa4meerkatgram.domain.post.entities.Post"
+        useGeneratedKeys="true"
+        keyProperty="id"
+    >
+        INSERT INTO posts (
+            user_id
+            ,content
+            ,image
+            ,created_at
+            ,updated_at
+        ) VALUES (
+            #{userId}
+            ,#{content}
+            ,#{image}
+            ,NOW()
+            ,NOW()
+        )
+    </insert>
+
+    <update id="destroy">
+        UPDATE posts
+        SET
+            updated_at = NOW()
+          ,deleted_at = NOW()
+        WHERE
+            id = #{id}
+    </update>
 </mapper>
