@@ -3,7 +3,6 @@ package com.msa4meerkatgram.domain.user.requests;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
-import org.springframework.web.multipart.MultipartFile;
 
 @Builder
 public record RegistrationReq(
@@ -17,6 +16,6 @@ public record RegistrationReq(
         String nick,
 
         @NotNull(message = "필수항목입니다.")
-        MultipartFile profile
+        String profile
 ) {
 }

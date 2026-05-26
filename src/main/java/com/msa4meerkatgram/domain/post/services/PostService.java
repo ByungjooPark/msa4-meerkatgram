@@ -5,7 +5,6 @@ import com.msa4meerkatgram.domain.post.mapper.PostMapper;
 import com.msa4meerkatgram.domain.post.requests.PostCreateReq;
 import com.msa4meerkatgram.domain.post.requests.PostIndexReq;
 import com.msa4meerkatgram.domain.post.responses.PostIndexRes;
-import com.msa4meerkatgram.global.util.file.FileConfig;
 import com.msa4meerkatgram.global.util.file.LocalFileManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,7 +17,6 @@ import java.util.List;
 public class PostService {
     private final PostMapper postMapper;
     private final LocalFileManager localFileManager;
-    private final FileConfig fileConfig;
 
     public PostIndexRes index(PostIndexReq postIndexReq) {
         int offset = (postIndexReq.page() - 1) * postIndexReq.limit();
@@ -49,21 +47,14 @@ public class PostService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public Post create(long userId, PostCreateReq request) {
-        // 파일 경로 생성
-        String profilePath = localFileManager.generatePostPath(request.image());
-        String fullPath = fileConfig.serverUri() + profilePath;
-
+    public Post store(long userId, PostCreateReq postCreateReq) {
         // DB 저장
         Post post = Post.builder()
             .userId(userId)
-            .content(request.content())
-            .image(fullPath)
+            .content(postCreateReq.content())
+            .image(postCreateReq.image())
             .build();
         postMapper.create(post);
-
-        // 파일 저장
-        localFileManager.saveFile(request.image(), profilePath);
 
         // 게시글 정보 획득
         return postMapper.findByPk(post.getId());

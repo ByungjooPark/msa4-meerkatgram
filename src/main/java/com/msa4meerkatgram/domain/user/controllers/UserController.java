@@ -32,10 +32,10 @@ public class UserController {
     }
 
     @PostMapping("/users")
-    public ResponseEntity<GlobalRes<UserRes>> create(
-        @Valid @ModelAttribute RegistrationReq registrationRequestDTO
+    public ResponseEntity<GlobalRes<UserRes>> store(
+        @Valid @RequestBody RegistrationReq registrationRequestDTO
     ) {
-        UserRes result = userService.create(registrationRequestDTO);
+        UserRes result = userService.store(registrationRequestDTO);
 
         GlobalRes<UserRes> globalRes = GlobalRes.<UserRes>builder()
             .code("00")

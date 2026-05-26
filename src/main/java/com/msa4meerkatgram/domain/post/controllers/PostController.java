@@ -48,11 +48,11 @@ public class PostController {
     }
 
     @PostMapping("/posts")
-    public ResponseEntity<GlobalRes<Post>> create(
+    public ResponseEntity<GlobalRes<Post>> store(
         @AuthenticationPrincipal Claims claims
-        , @ModelAttribute PostCreateReq postCreateReq
-    ) throws Exception {
-        Post result = postService.create(Long.parseLong(claims.getSubject()), postCreateReq);
+        , @RequestBody PostCreateReq postCreateReq
+    ) {
+        Post result = postService.store(Long.parseLong(claims.getSubject()), postCreateReq);
 
         GlobalRes<Post> globalRes = GlobalRes.<Post>builder()
             .code("00")

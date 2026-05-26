@@ -9,10 +9,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.UUID;
 
 @Component
 public class LocalFileManager {
+    private final List<String> ALLOW_EXTENTION_LIST =  List.of("image/jpg", "image/jpeg", "image/png", "image/webp");
     private final FileConfig fileConfig;
 
     public LocalFileManager(FileConfig fileConfig) {
@@ -21,30 +25,40 @@ public class LocalFileManager {
 
     // 확장자 추출을 Optional로 변경하여 안전성 확보
     public String getExtension(MultipartFile file) {
+        // 파일 존재 체크
         if (file == null || file.isEmpty()) {
             throw new FileStorageException("파일 저장 실패: 파일 확장자 획득 실패(파일 없음)");
         }
 
+        // 파일 확장자 검증
         String fileName = file.getOriginalFilename();
         if (fileName == null || !fileName.contains(".")) {
             throw new FileStorageException("파일 저장 실패: 파일 확장자 획득 실패(파일명 이상)");
         }
+        String extractExtension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
 
-        return fileName.substring(fileName.lastIndexOf(".")).toLowerCase();
+        if(!ALLOW_EXTENTION_LIST.contains("image/" + extractExtension)) {
+            throw new FileStorageException(String.format("파일 저장 실패: 허용하지 않는 확장자(.%s)", extractExtension));
+        }
+
+        return extractExtension;
     }
 
     // 랜덤 파일명 생성 (확장자 미지정 시 기본적으로 .png 대입 혹은 에러 처리 유도)
     private String generateFileName(MultipartFile file) {
-        return UUID.randomUUID() + this.getExtension(file);
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+        LocalDate now = LocalDate.now();
+
+        return now.format(dateFormatter) + "_" + UUID.randomUUID() + "." + this.getExtension(file);
     }
 
-    // OS 독립적인 경로 생성을 위해 Paths.get() 활용
+    // URL의 path로 사용될 경로 생성
     public String generateProfilePath(MultipartFile file) {
-        return Paths.get(fileConfig.profilePath(), this.generateFileName(file)).toString();
+        return fileConfig.profilePath() + "/" + this.generateFileName(file);
     }
 
     public String generatePostPath(MultipartFile file) {
-        return Paths.get(fileConfig.postPath(), this.generateFileName(file)).toString();
+        return fileConfig.postPath() + "/" + this.generateFileName(file);
     }
 
     // 디렉토리 생성 로직 내장

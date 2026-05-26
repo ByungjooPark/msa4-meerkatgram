@@ -11,10 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -24,7 +21,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<GlobalRes<AuthRes>> login(
-        @Valid @ModelAttribute LoginReq LoginReq
+        @Valid @RequestBody LoginReq LoginReq
         , HttpServletResponse response
     ) {
         AuthRes result = authService.login(LoginReq, response);
