@@ -5,7 +5,7 @@
 
 <mapper namespace="com.msa4meerkatgram.domain.user.mapper.UserMapper">
     <resultMap id="UserResultMap" type="com.msa4meerkatgram.domain.user.entities.User">
-        <result column="id" property="id" />
+        <id column="id" property="id" />
         <result column="email" property="email" />
         <result column="password" property="password" />
         <result column="nick" property="nick" />
