@@ -4,6 +4,7 @@ import com.msa4meerkatgram.domain.auth.requests.LoginReq;
 import com.msa4meerkatgram.domain.auth.responses.AuthRes;
 import com.msa4meerkatgram.domain.auth.services.AuthService;
 import com.msa4meerkatgram.global.responses.GlobalRes;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,5 +33,29 @@ public class AuthController {
                 .build()
         );
     }
+
+    @PostMapping("/reissue-token")
+    public ResponseEntity<GlobalRes<AuthRes>> reissue(
+        HttpServletRequest request
+        ,HttpServletResponse response
+    ) {
+        return ResponseEntity.status(200).body(
+            GlobalRes.<AuthRes>builder()
+                .code("00")
+                .message("토큰 재발급 완료")
+                .data(authService.reissue(request, response))
+                .build()
+        );
+    }
+
+
+
+
+
+
+
+
+
+
 
 }
