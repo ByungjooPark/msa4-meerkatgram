@@ -7,13 +7,13 @@ public final class SecurityUrlRegistry {
     // 모두 허용할 화이트리스트
     // -------------------------
     public static final String[] PUBLIC_GET_URLS = {
-        "/api/auth/social/{provider}"
-        ,"/api/auth/social/callback/{provider}"
+        "/api/social/{provider}"
+        ,"/api/social/callback/{provider}"
         ,"/api/posts"
     };
     public static final String[] PUBLIC_POST_URLS = {
-        "/api/auth/login"
-        ,"/api/auth/reissue"
+        "/api/login"
+        ,"/api/reissue-token"
         ,"/api/users"
     };
 

@@ -28,3 +28,28 @@ logging:
     # 특정 패키지만 로그 출력 레벨 설정
     com.msa4meerkatgram.controllers:
 
+# Security & JWT
+security:
+  jwt:
+    secure: false
+    issuer: meerkat@meerkat.kr
+    type: JWT
+    access-token-expiry: 1000000
+    refresh-token-expiry: 1296000000
+    refresh-token-cookie-name: refresh-token
+    refresh-token-cookie-expiry: 1296000
+    secret: w4e5gwe57nhwb456g3h46g34of6h9439f5h8o7os5789hflsg645eh74s57he54g734
+    header-key: Authorization
+    scheme: Bearer
+    reiss-uri: /api/reissue-token
+
+# config
+file:
+  server-uri: http://localhost:8080
+  storage-path: D:/workspace/msa4-meerkatgram/storage
+  profile-path: /images/profiles
+  post-path: /images/posts
+
+cors:
+  allowed-origins: ["http://localhost:5173"]
+  max-age: 3600
