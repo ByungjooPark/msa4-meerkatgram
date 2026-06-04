@@ -15,4 +15,27 @@
         WHERE
             id = #{id}
     </update>
+
+    <insert
+        id="create"
+        parameterType="com.msa4meerkatgram.domain.user.entities.User"
+        useGeneratedKeys="true"
+        keyProperty="id"
+    >
+        INSERT INTO users(
+            email
+            ,password
+            ,nick
+            ,role
+            ,provider
+            ,profile
+        ) VALUES (
+            #{email}
+            ,#{password}
+            ,#{nick}
+            ,#{role}
+            ,#{provider}
+            ,#{profile}
+        )
+    </insert>
 </mapper>

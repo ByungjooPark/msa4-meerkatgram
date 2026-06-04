@@ -2,12 +2,16 @@ package com.msa4meerkatgram.domain.auth.services;
 
 import com.msa4meerkatgram.domain.auth.mapper.AuthMapper;
 import com.msa4meerkatgram.domain.auth.requests.LoginReq;
+import com.msa4meerkatgram.domain.auth.requests.RegistrationReq;
 import com.msa4meerkatgram.domain.auth.responses.AuthRes;
 import com.msa4meerkatgram.domain.user.entities.User;
 import com.msa4meerkatgram.domain.user.mapper.UserMapper;
 import com.msa4meerkatgram.domain.user.responses.UserRes;
+import com.msa4meerkatgram.global.errors.custom.DuplicatedRecordException;
 import com.msa4meerkatgram.global.errors.custom.InvalidTokenException;
 import com.msa4meerkatgram.global.errors.custom.NotRegisteredException;
+import com.msa4meerkatgram.global.security.constant.ProviderPolicy;
+import com.msa4meerkatgram.global.security.constant.RolePolicy;
 import com.msa4meerkatgram.global.security.cookie.CookieManager;
 import com.msa4meerkatgram.global.security.jwt.JwtConfig;
 import com.msa4meerkatgram.global.security.jwt.JwtProvider;
@@ -134,5 +138,24 @@ public class AuthService {
             ,0
             ,jwtConfig.reissUri()
         );
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void registration(RegistrationReq registrationReq) {
+        // 유저 정보 획득
+        User user = userMapper.findByEmail(registrationReq.email());
+
+        if(user != null) {
+            throw new DuplicatedRecordException("이미 가입된 회원입니다.");
+        }
+
+        User newUser = new User();
+        newUser.setEmail(registrationReq.email());
+        newUser.setPassword(passwordEncoder.encode(registrationReq.password()));
+        newUser.setNick(registrationReq.nick());
+        newUser.setProfile(registrationReq.profile());
+        newUser.setProvider(ProviderPolicy.NONE.getProvider());
+        newUser.setRole(RolePolicy.NORMAL.getRole());
+        authMapper.create(newUser);
     }
 }
