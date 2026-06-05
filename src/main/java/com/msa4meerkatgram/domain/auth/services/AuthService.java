@@ -4,6 +4,7 @@ import com.msa4meerkatgram.domain.auth.mapper.AuthMapper;
 import com.msa4meerkatgram.domain.auth.requests.LoginReq;
 import com.msa4meerkatgram.domain.auth.requests.RegistrationReq;
 import com.msa4meerkatgram.domain.auth.responses.AuthRes;
+import com.msa4meerkatgram.domain.post.mapper.PostMapper;
 import com.msa4meerkatgram.domain.user.entities.User;
 import com.msa4meerkatgram.domain.user.mapper.UserMapper;
 import com.msa4meerkatgram.domain.user.responses.UserRes;
@@ -33,6 +34,7 @@ public class AuthService {
     private final CookieManager cookieManager;
     private final JwtConfig jwtConfig;
     private final PasswordEncoder passwordEncoder;
+    private final PostMapper postMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public AuthRes login(HttpServletResponse response, LoginReq loginReq) {
@@ -87,6 +89,9 @@ public class AuthService {
      * @return AuthRes
      */
     private AuthRes generateAuthentication(HttpServletResponse response, User user) {
+        // 작성 게시글 수 획득
+        long countPosts = postMapper.countPostsByUserId(user.getId());
+
         // 토큰 생성
         String newAccessToken = jwtProvider.generateAccessToken(user);
         String newRefreshToken = jwtProvider.generateRefreshToken(user);
@@ -108,11 +113,13 @@ public class AuthService {
             .accessToken(newAccessToken)
             .user(
                 UserRes.builder()
+                    .id(user.getId())
                     .email(user.getEmail())
                     .nick(user.getNick())
                     .role(user.getRole())
                     .profile(user.getProfile())
                     .createdAt(user.getCreatedAt())
+                    .countPosts(countPosts)
                     .build()
             )
             .build();
