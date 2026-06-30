@@ -9,7 +9,7 @@ pipeline {
         REGISTRY      = "192.168.0.5:6901"
         IMAGE_NAME    = "meerkat/meerkatgram/api"          // <변경필요>
         CLONE_NAME    = "k8s-manifests"
-        MANIFEST_REPO = "github.com/ByungjooPark/k8s-registry.git"  // <변경필요>
+        MANIFEST_REPO = "github.com/ByungjooPark/k8s-manifests.git"  // <변경필요>
         MANIFEST_PATH = "meerkat/meerkatgram/api"          // <변경필요>
         IMAGE_TAG     = "${BUILD_NUMBER}"
     }
