@@ -37,15 +37,15 @@ pipeline {
                     usernameVariable: 'GIT_USER',
                     passwordVariable: 'GIT_TOKEN'
                 )]) {
-                    sh """
+                    sh ```
                         git clone https://${GIT_USER}:${GIT_TOKEN}@${MANIFEST_REPO} ${CLONE_NAME}
                         cd ${CLONE_NAME}/${MANIFEST_PATH}
                         sed -i "s|image: ${REGISTRY}/${IMAGE_NAME}:.*|image: ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}|" deployment.yaml
                         git config user.email "meerkat@ci"
-                        git config user.name "meerkatCi"
+                        git config user.name "meerkatci"
                         git commit -am "Deploy ${IMAGE_NAME}:${IMAGE_TAG}"
                         git push
-                    """
+                    ```
                 }
             }
         }
@@ -53,9 +53,9 @@ pipeline {
 
     post {
         always {
-            sh """
+            sh ```
                 rm -rf ${CLONE_NAME}
-            """
+            ```
             cleanWs()
         }
     }
