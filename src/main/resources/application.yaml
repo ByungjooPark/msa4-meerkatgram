@@ -9,9 +9,9 @@ spring:
 
   # DB
   datasource:
-    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:meerkatgram}
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:msa505}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 server:
@@ -46,7 +46,7 @@ security:
     refresh-token-expiry: 1296000000
     refresh-token-cookie-name: refresh-token
     refresh-token-cookie-expiry: 1296000
-    secret: ${JWT_SECRET}
+    secret: ${JWT_SECRET:34589hf72349q8925h8q39f5h72934hf59q28h346f5983qo4gfo53q4g53q4g}
     header-key: Authorization
     scheme: Bearer
     reiss-uri: /api/reissue-token
@@ -54,7 +54,7 @@ security:
 # file
 file:
   server-uri: ${SERVER_URI:http://localhost:8080}
-  storage-path: /data/storage
+  storage-path: /storage
   profile-path: /files/profiles
   post-path: /files/posts
   allow-extension-list: [
