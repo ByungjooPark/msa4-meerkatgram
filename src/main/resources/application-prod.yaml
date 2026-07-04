@@ -10,9 +10,9 @@ spring:
 
   # DB
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:meerkatgram}
-    username: ${DB_USER:root}
-    password: ${DB_PASSWORD:msa505}
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 server:
@@ -47,7 +47,7 @@ security:
     refresh-token-expiry: 1296000000
     refresh-token-cookie-name: refresh-token
     refresh-token-cookie-expiry: 1296000
-    secret: ${JWT_SECRET:34589hf72349q8925h8q39f5h72934hf59q28h346f5983qo4gfo53q4g53q4g}
+    secret: ${JWT_SECRET}
     header-key: Authorization
     scheme: Bearer
     reissue-uri: /api/reissue-token
@@ -68,5 +68,5 @@ file:
   ]
 
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS}
   max-age: 3600

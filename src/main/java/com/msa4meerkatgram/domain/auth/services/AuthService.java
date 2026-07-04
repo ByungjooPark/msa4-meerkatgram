@@ -105,7 +105,7 @@ public class AuthService {
             ,jwtConfig.refreshTokenCookieName()
             ,newRefreshToken
             ,jwtConfig.refreshTokenCookieExpiry()
-            ,jwtConfig.reissUri()
+            ,jwtConfig.reissueUri()
         );
 
         // 리턴
@@ -143,7 +143,7 @@ public class AuthService {
             ,jwtConfig.refreshTokenCookieName()
             ,null
             ,0
-            ,jwtConfig.reissUri()
+            ,jwtConfig.reissueUri()
         );
     }
 

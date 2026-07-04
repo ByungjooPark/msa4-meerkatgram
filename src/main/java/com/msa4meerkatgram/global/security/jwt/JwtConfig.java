@@ -14,6 +14,6 @@ public record JwtConfig(
     String secret,
     String headerKey,
     String scheme,
-    String reissUri
+    String reissueUri
 ) {
 }
