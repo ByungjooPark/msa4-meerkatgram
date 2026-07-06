@@ -11,4 +11,5 @@ public interface PostMapper {
     long getTotal();
     PostMybatis findByPk(long id);
     long countPostsByUserId(long userId);
+    int store(Post post);
 }
