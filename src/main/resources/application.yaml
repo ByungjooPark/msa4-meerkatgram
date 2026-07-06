@@ -14,11 +14,50 @@ spring:
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:msa505}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    # 커넥션 풀 설정
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 30000
+
+  # JPA
+  jpa:
+    hibernate:
+      # 서버를 재시작 할 때, DB 스키마를 어떻게 관리할지 설정
+      # `none` 이외의 설정 값을 사용시, DB 스키마가 초기화 되거나 수정되므로 요주의
+      # 설정 값
+      #    - `none`: 스키마 자동 생성 비활성화 (Default)
+      #    - `update`: 기존 테이블을 유지하며 변경 사항만 업데이트
+      #    - `create`: 애플리케이션 실행 시 테이블 생성 (기존 데이터 삭제됨)
+      #    - `create-drop`: 애플리케이션 종료 시 테이블 삭제
+      #    - `validate`: 기존 테이블의 구조를 검증하고, 일치하지 않으면 예외 발생
+      ddl-auto: create-drop
+    # 실행되는 SQL을 콘솔에 출력 여부
+    show-sql: true
+    properties:
+      hibernate:
+        # SQL을 보기 좋게 포맷하여 출력
+        format_sql: true
+    # 데이터 소스 초기화 지연 설정
+      # - true로 설정 시, Spring 컨텍스트가 완전히 로드된 후에 어플리케이션의 DataSource 초기화
+    defer-datasource-initialization: true
+  sql:
+    init:
+      # DB 초기화 파일의 위치 설정
+      data-locations: classpath*:dummy/*.sql
+      # DB 초기화 파일이 실행될 시점을 설정
+      #      - `embedded`: 내장 데이터베이스일 경우에만 초기화 파일 실행
+      #      - `always`: 모든 데이터 베이스에서 초기화 파일 항상 실행
+      #      - `never`: 실행하지 않음
+      mode: never
+      # 사용할 DB 플랫폼 설정
+      #   - all :  모든 플랫폼에서 설정을 적용
+      #   - h2, mysql 등 : 특정 데이터베이스에만 초기화 파일을 실행
+      platform: all
 
 server:
   error:
-    include-stacktrace: never
-    include-message: never
+    include-stacktrace: always
+    include-message: always
 
 # MyBatis
 mybatis:
