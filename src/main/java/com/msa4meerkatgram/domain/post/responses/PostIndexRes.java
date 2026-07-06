@@ -1,6 +1,6 @@
 package com.msa4meerkatgram.domain.post.responses;
 
-import com.msa4meerkatgram.domain.post.entities.Post;
+import com.msa4meerkatgram.domain.post.entities.PostMybatis;
 import lombok.Builder;
 
 import java.util.List;
@@ -9,6 +9,6 @@ import java.util.List;
 public record PostIndexRes(
         long total
         ,boolean lastPage
-        ,List<Post> posts
+        ,List<PostMybatis> posts
 ) {
 }

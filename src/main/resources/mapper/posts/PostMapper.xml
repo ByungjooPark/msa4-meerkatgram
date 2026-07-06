@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
 <mapper namespace="com.msa4meerkatgram.domain.post.mapper.PostMapper">
-    <resultMap id="postResultMap" type="com.msa4meerkatgram.domain.post.entities.Post">
+    <resultMap id="postResultMap" type="com.msa4meerkatgram.domain.post.entities.PostMybatis">
         <id column="id" property="id" />
         <result column="user_id" property="userId" />
         <result column="content" property="content" />

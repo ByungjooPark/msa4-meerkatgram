@@ -1,10 +1,10 @@
 package com.msa4meerkatgram.domain.user.mapper;
 
-import com.msa4meerkatgram.domain.user.entities.User;
+import com.msa4meerkatgram.domain.user.entities.UserMybatis;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
 public interface UserMapper {
-    User findByPk(long id);
-    User findByEmail(String email);
+    UserMybatis findByPk(long id);
+    UserMybatis findByEmail(String email);
 }
