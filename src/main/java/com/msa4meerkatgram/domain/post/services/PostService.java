@@ -46,9 +46,9 @@ public class PostService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public Post store(long userId, PostStoreReq postStoreReq) {
+    public PostMybatis store(long userId, PostStoreReq postStoreReq) {
         // 작성 게시글 객체 생성
-        Post post = Post.builder()
+        PostMybatis post = PostMybatis.builder()
             .userId(userId)
             .content(postStoreReq.content())
             .image(postStoreReq.image())

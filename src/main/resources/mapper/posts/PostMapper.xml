@@ -53,7 +53,7 @@
 
     <insert
         id="store"
-        parameterType="com.msa4meerkatgram.domain.post.entities.Post"
+        parameterType="com.msa4meerkatgram.domain.post.entities.PostMybatis"
         useGeneratedKeys="true"
         keyProperty="id"
     >

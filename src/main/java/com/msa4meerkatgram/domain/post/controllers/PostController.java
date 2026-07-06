@@ -49,12 +49,12 @@ public class PostController {
     }
 
     @PostMapping("/posts")
-    public ResponseEntity<GlobalRes<Post>> store(
+    public ResponseEntity<GlobalRes<PostMybatis>> store(
         @Valid @RequestBody PostStoreReq postStoreReq
         , @AuthenticationPrincipal Claims claims
     ) {
         return ResponseEntity.status(200).body(
-            GlobalRes.<Post>builder()
+            GlobalRes.<PostMybatis>builder()
                 .code("00")
                 .message("게시글 작성 정상 처리")
                 .data(postService.store(Long.parseLong(claims.getSubject()), postStoreReq))
