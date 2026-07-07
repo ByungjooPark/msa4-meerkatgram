@@ -1,15 +1,19 @@
 package com.msa4meerkatgram.domain.post.controllers;
 
+import com.msa4meerkatgram.domain.post.entities.PostMybatis;
+import com.msa4meerkatgram.domain.post.requests.PostIndexReq;
+import com.msa4meerkatgram.domain.post.requests.PostStoreReq;
+import com.msa4meerkatgram.domain.post.responses.PostIndexRes;
 import com.msa4meerkatgram.domain.post.responses.PostWithUserRes;
 import com.msa4meerkatgram.domain.post.services.PostService;
 import com.msa4meerkatgram.global.responses.GlobalRes;
+import io.jsonwebtoken.Claims;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @RestController
@@ -41,6 +45,20 @@ public class PostController {
                 .code("00")
                 .message("게시글 상세 정상 처리")
                 .data(result)
+                .build()
+        );
+    }
+
+    @PostMapping("/posts")
+    public ResponseEntity<GlobalRes<PostMybatis>> store(
+        @Valid @RequestBody PostStoreReq postStoreReq
+        , @AuthenticationPrincipal Claims claims
+    ) {
+        return ResponseEntity.status(200).body(
+            GlobalRes.<PostMybatis>builder()
+                .code("00")
+                .message("게시글 작성 정상 처리")
+                .data(postService.store(Long.parseLong(claims.getSubject()), postStoreReq))
                 .build()
         );
     }
