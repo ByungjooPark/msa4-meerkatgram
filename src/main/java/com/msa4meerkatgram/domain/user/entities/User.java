@@ -26,7 +26,7 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) // PK 자동 생성 전략 설정
     @Column(name = "id", columnDefinition = "BIGINT UNSIGNED")
-    private long id;
+    private Long id;
 
     @Column(name = "email", unique = true, nullable = false, length = 100)
     private String email;

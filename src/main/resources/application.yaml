@@ -30,7 +30,7 @@ spring:
       #    - `create`: 애플리케이션 실행 시 테이블 생성 (기존 데이터 삭제됨)
       #    - `create-drop`: 애플리케이션 종료 시 테이블 삭제
       #    - `validate`: 기존 테이블의 구조를 검증하고, 일치하지 않으면 예외 발생
-      ddl-auto: create-drop
+      ddl-auto: none
     # 실행되는 SQL을 콘솔에 출력 여부
     show-sql: true
     properties:
