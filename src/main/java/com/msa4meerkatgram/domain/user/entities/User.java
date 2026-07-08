@@ -63,4 +63,7 @@ public class User {
 
     @Column(name = "deleted_at", nullable = true)
     private LocalDateTime deletedAt;
+
+    // @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    // private List<Post> posts;
 }

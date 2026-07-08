@@ -37,7 +37,8 @@ spring:
       hibernate:
         # SQL을 보기 좋게 포맷하여 출력
         format_sql: true
-    # 데이터 소스 초기화 지연 설정
+        default_batch_fetch_size: 100
+      # 데이터 소스 초기화 지연 설정
       # - true로 설정 시, Spring 컨텍스트가 완전히 로드된 후에 어플리케이션의 DataSource 초기화
     defer-datasource-initialization: true
   sql:
