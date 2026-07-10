@@ -1,11 +1,12 @@
-package com.msa4meerkatgram.global.errors.constant;
+package com.msa4meerkatgram.global.responses.constant;
 
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 @Getter
-public enum CustomErrorCode {
-    NOT_REGISTERED_ERROR(HttpStatus.UNAUTHORIZED, "E01")
+public enum CustomResponseCode {
+    SUCCESS(HttpStatus.OK, "00")
+    ,NOT_REGISTERED_ERROR(HttpStatus.UNAUTHORIZED, "E01")
     , UNAUTHENTICATED_ERROR(HttpStatus.UNAUTHORIZED, "E02")
     , UNAUTHORIZED_ERROR(HttpStatus.FORBIDDEN, "E03")
     , INVALID_TOKEN_ERROR(HttpStatus.UNAUTHORIZED, "E04")
@@ -20,7 +21,7 @@ public enum CustomErrorCode {
     private final HttpStatus httpStatus;
     private final String code;
 
-    CustomErrorCode(HttpStatus httpStatus, String code) {
+    CustomResponseCode(HttpStatus httpStatus, String code) {
         this.httpStatus = httpStatus;
         this.code = code;
     }
