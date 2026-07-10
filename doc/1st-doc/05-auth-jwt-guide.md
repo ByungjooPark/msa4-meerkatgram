@@ -117,6 +117,7 @@ public SecurityFilterChain filterChain(HttpSecurity http,
         .authorizeHttpRequests(req ->
             req.requestMatchers(HttpMethod.GET, SecurityUrlRegistry.AUTH_REQUIRED_GET_URLS).authenticated()
                .requestMatchers(HttpMethod.POST, SecurityUrlRegistry.AUTH_REQUIRED_POST_URLS).authenticated()
+               .requestMatchers(HttpMethod.PUT, SecurityUrlRegistry.AUTH_REQUIRED_PUT_URLS).authenticated()
                .requestMatchers(HttpMethod.PATCH, SecurityUrlRegistry.AUTH_REQUIRED_PATCH_URLS).authenticated()
                .requestMatchers(HttpMethod.DELETE, SecurityUrlRegistry.AUTH_REQUIRED_DELETE_URLS).authenticated()
                .anyRequest().permitAll()
@@ -137,16 +138,19 @@ public SecurityFilterChain filterChain(HttpSecurity http,
 ```java
 // SecurityUrlRegistry.java
 public final class SecurityUrlRegistry {
-    private SecurityUrlRegistry() {} // 인스턴스화 방지
+    private SecurityUrlRegistry() {} // 인스턴스 생성 방지
 
+    // 블랙리스트 (인증이 반드시 필요)
     public static final String[] AUTH_REQUIRED_GET_URLS    = { "/api/posts/{id}" };
     public static final String[] AUTH_REQUIRED_POST_URLS   = { "/api/logout", "/api/posts" };
-    public static final String[] AUTH_REQUIRED_PATCH_URLS  = { "/api/users" };
-    public static final String[] AUTH_REQUIRED_DELETE_URLS = { "/api/posts" };
+    public static final String[] AUTH_REQUIRED_PUT_URLS    = {};
+    public static final String[] AUTH_REQUIRED_PATCH_URLS  = {};
+    public static final String[] AUTH_REQUIRED_DELETE_URLS = { "/api/posts/{id}" };
 }
 ```
 
 > 인증이 필요한 URL을 한 파일에 모아 관리하면, Security 설정(`SecurityConfiguration`)과 URL 목록의 관심사를 분리할 수 있다.
+> `AUTH_REQUIRED_DELETE_URLS`에 `/api/posts/{id}`가 등록되어 있지만, 실제 컨트롤러에는 DELETE 핸들러가 없다(`04-api-specification.md`의 6-4 참고) — 등록만 되어 있고 라우트가 없는 상태.
 
 ---
 
@@ -163,7 +167,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 
         // ① Authorization 헤더에서 Access Token 추출
-        Optional<String> tokenOptional = jwtTokenProvider.extractAccessToken(request);
+        Optional<String> tokenOptional = jwtProvider.extractAccessToken(request);
 
         // ② 토큰이 있을 때만 검증 실행 (없으면 인증 없이 다음 필터로)
         if (tokenOptional.isPresent()) {
@@ -198,12 +202,12 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
 // SecurityAuthenticationProvider.java
 @Component
 public class SecurityAuthenticationProvider {
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtProvider jwtProvider;
 
     public Authentication authentication(String token) {
         // 토큰 검증 후 Claims 객체를 principal(사용자 정보)로 등록
         return new UsernamePasswordAuthenticationToken(
-            jwtTokenProvider.extractClaims(token), // principal = Claims
+            jwtProvider.extractClaims(token), // principal = Claims
             null,                                   // credentials (불필요)
             List.of()                               // authorities (권한 목록, 미사용)
         );
@@ -216,10 +220,10 @@ public class SecurityAuthenticationProvider {
 
 ---
 
-## 8. `JwtTokenProvider` — 토큰 생성·검증
+## 8. `JwtProvider` — 토큰 생성·검증
 
 ```java
-// JwtTokenProvider.java
+// JwtProvider.java
 private String generateToken(User user, long ttl) {
     Date now = new Date();
     return Jwts.builder()
@@ -283,44 +287,48 @@ public void setCookie(HttpServletResponse response, String name, String value, i
 
 ```java
 // AuthService.java
-@Transactional
-public AuthRes login(LoginReq loginRequest, HttpServletResponse response) {
-    // ① DB에서 이메일로 유저 조회
-    User user = userMapper.findByEmail(loginRequest.email());
-    if (user == null) {
-        throw new NotRegisteredException("아이디와 비밀번호를 확인해주세요.");
-    }
+@Transactional(rollbackFor = Exception.class)
+public AuthRes login(HttpServletResponse response, LoginReq loginReq) {
+    // ① DB에서 이메일로 유저 조회 + 가입 여부 확인
+    User user = authRepository.findByEmail(loginReq.email())
+        .orElseThrow(() -> new NotRegisteredException("아이디와 비밀번호를 확인해주세요."));
 
     // ② BCrypt로 비밀번호 검증
-    if (!passwordEncoder.matches(loginRequest.password(), user.getPassword())) {
+    if (!passwordEncoder.matches(loginReq.password(), user.getPassword())) {
         throw new NotRegisteredException("아이디와 비밀번호를 확인해주세요.");
     }
 
     // ③ 토큰 생성 → DB 저장 → 쿠키 세팅 → 응답 반환
-    return generateAuthentication(user, response);
+    return this.generateAuthentication(response, user);
 }
 
-private AuthRes generateAuthentication(User user, HttpServletResponse response) {
-    String newAccessToken  = jwtTokenProvider.generateAccessToken(user);
-    String newRefreshToken = jwtTokenProvider.generateRefreshToken(user);
+private AuthRes generateAuthentication(HttpServletResponse response, User user) {
+    // 작성 게시글 수 획득 (로그인 응답에 함께 내려줌)
+    long countPosts = postRepository.countByUser(user);
 
-    authMapper.updateRefreshToken(user.getId(), newRefreshToken); // DB 저장
-    cookieManager.setCookie(response,
-        jwtConfig.refreshTokenCookieName(),
-        newRefreshToken,
-        jwtConfig.refreshTokenCookieExpiry(),
-        jwtConfig.reissUri()
+    String newAccessToken  = jwtProvider.generateAccessToken(user);
+    String newRefreshToken = jwtProvider.generateRefreshToken(user);
+
+    // 리프레시 토큰을 DB에 저장
+    user.setRefreshToken(newRefreshToken);
+    authRepository.save(user);
+
+    // 리프레시 토큰을 쿠키에 저장
+    cookieManager.setCookie(
+        response
+        , jwtConfig.refreshTokenCookieName()
+        , newRefreshToken
+        , jwtConfig.refreshTokenCookieExpiry()
+        , jwtConfig.reissueUri()
     );
 
-    return AuthRes.builder()
-        .accessToken(newAccessToken)
-        .user(UserRes.builder()...build())
-        .build();
+    return AuthRes.from(user, newAccessToken, countPosts);
 }
 ```
 
 > 존재하지 않는 이메일과 비밀번호 불일치 모두 같은 메시지(`"아이디와 비밀번호를 확인해주세요"`)를 반환한다.
 > 어느 쪽이 틀렸는지 구분해주면 공격자에게 정보를 제공하는 셈이므로, 의도적으로 동일한 메시지를 사용한다.
+> `generateAuthentication`은 로그인/재발급이 공유하는 private 메서드다.
 
 ---
 
@@ -328,31 +336,31 @@ private AuthRes generateAuthentication(User user, HttpServletResponse response) 
 
 ```java
 // AuthService.java
-@Transactional
+@Transactional(rollbackFor = Exception.class)
 public AuthRes reissue(HttpServletRequest request, HttpServletResponse response) {
     // ① 쿠키에서 Refresh Token 추출
-    Optional<String> refreshTokenOptional = jwtTokenProvider.extractRefreshToken(request);
-    if (refreshTokenOptional.isEmpty()) {
-        throw new InvalidTokenException("토큰 미존재");
-    }
-    String refreshToken = refreshTokenOptional.get();
+    String extractRefreshToken = jwtProvider.extractRefreshToken(request)
+        .orElseThrow(() -> new InvalidTokenException("토큰이 없습니다."));
 
     // ② Refresh Token에서 userId 파싱
-    long id = Long.parseLong(jwtTokenProvider.extractClaims(refreshToken).getSubject());
+    long id = Long.parseLong(jwtProvider.extractClaims(extractRefreshToken).getSubject());
 
     // ③ DB에서 유저 조회
-    User user = userMapper.findByPk(id);
-    if (user == null) {
+    User user = authRepository.findById(id)
+        .orElseThrow(() -> new InvalidTokenException("유효하지 않은 회원의 토큰입니다."));
+
+    // ④ 비로그인 상태 확인 (로그아웃된 유저는 refreshToken이 null)
+    if (user.getRefreshToken() == null) {
         throw new InvalidTokenException("유효하지 않은 회원의 토큰입니다.");
     }
 
-    // ④ DB에 저장된 Refresh Token과 비교 (탈취 감지)
-    if (!refreshToken.equals(user.getRefreshToken())) {
+    // ⑤ DB에 저장된 Refresh Token과 비교 (탈취 감지)
+    if (!user.getRefreshToken().equals(extractRefreshToken)) {
         throw new InvalidTokenException("토큰이 일치하지 않습니다.");
     }
 
-    // ⑤ 새 토큰 쌍 발급
-    return generateAuthentication(user, response);
+    // ⑥ 새 토큰 쌍 발급
+    return this.generateAuthentication(response, user);
 }
 ```
 

@@ -22,9 +22,9 @@
 │         Service Layer               │  비즈니스 로직 처리
 └────────────────┬────────────────────┘
                  │
-┌────────────────▼────────────────────┐
-│         Mapper Layer (MyBatis)      │  SQL 실행, 결과 매핑
-└────────────────┬────────────────────┘
+┌────────────────▼──────────────────────────────────┐
+│  Repository Layer (Spring Data JPA + QueryDSL)     │  엔티티 CRUD, 동적/복잡 조회
+└────────────────┬──────────────────────────────────┘
                  │
 ┌────────────────▼────────────────────┐
 │         MySQL Database              │
@@ -36,7 +36,7 @@
 | Filter | JWT 토큰 검증, SecurityContext 등록 | 비즈니스 로직 처리 |
 | Controller | HTTP 요청 수신·응답 반환, `@Valid` 검증 | SQL 직접 실행, 비즈니스 로직 |
 | Service | 비즈니스 로직, 트랜잭션 관리 | HTTP 관련 코드 (`HttpServletRequest` 등) |
-| Mapper | SQL 실행, DB 결과 → Java 객체 변환 | 비즈니스 로직 |
+| Repository | 엔티티 CRUD(Spring Data JPA), 동적 조회(QueryDSL) | 비즈니스 로직 |
 
 ---
 
@@ -48,20 +48,22 @@ src/main/java/com/msa4meerkatgram/
 ├── Msa4MeerkatgramApplication.java      ← 진입점 (@SpringBootApplication)
 │
 ├── domain/                              ← 비즈니스 도메인별 코드
-│   ├── auth/                            ← 인증 (로그인, 로그아웃, 토큰 재발급)
+│   ├── auth/                            ← 인증 (로그인, 로그아웃, 토큰 재발급, 회원가입)
 │   │   ├── controllers/
 │   │   │   └── AuthController.java
-│   │   ├── mapper/
-│   │   │   └── AuthMapper.java
+│   │   ├── entities/                    ← (비어있음) auth 전용 엔티티 없이 User를 재사용
+│   │   ├── repositories/
+│   │   │   └── AuthRepository.java      ← JpaRepository<User, Long>
 │   │   ├── requests/
-│   │   │   └── LoginReq.java
+│   │   │   ├── LoginReq.java
+│   │   │   └── RegistrationReq.java
 │   │   ├── responses/
 │   │   │   └── AuthRes.java
 │   │   └── services/
 │   │       └── AuthService.java
 │   │
-│   ├── file/                            ← 파일 업로드
-│   │   ├── controleers/
+│   ├── file/                            ← 파일 업로드 (DB 테이블 없는 무상태 도메인)
+│   │   ├── controllers/
 │   │   │   └── FileController.java
 │   │   ├── responses/
 │   │   │   └── FileRes.java
@@ -71,33 +73,41 @@ src/main/java/com/msa4meerkatgram/
 │   ├── post/                            ← 게시글 CRUD, 페이지네이션
 │   │   ├── controllers/
 │   │   ├── entities/
-│   │   ├── mapper/
+│   │   ├── repositories/                ← PostRepository(JPA), PostQueryRepository(QueryDSL)
 │   │   ├── requests/
-│   │   ├── responses/
+│   │   ├── responses/                   ← PostWithoutUserRes.java는 미사용(dead code)
 │   │   └── services/
 │   │
-│   └── user/                            ← 회원가입, 유저 조회
-│       ├── constant/                    ← Enum (RolePolicy, ProviderPolicy)
-│       ├── controllers/
+│   └── user/                            ← 현재는 빈 스텁(공개 엔드포인트 없음)
+│       ├── controllers/                 ← UserController: 엔드포인트 0개
 │       ├── entities/
-│       ├── mapper/
-│       ├── requests/
+│       ├── repositories/                ← UserRepository (커스텀 메서드 없음, 미사용)
 │       ├── responses/
-│       └── services/
+│       └── services/                    ← UserService: 빈 스텁
 │
 └── global/                              ← 전 도메인 공통 코드
     ├── config/
     │   ├── CorsConfig.java              ← CORS 설정값 (@ConfigurationProperties)
-    │   └── WebConfig.java               ← 정적 리소스(이미지) 경로 설정
+    │   ├── WebConfig.java               ← 정적 리소스(/files/**) 경로 설정
+    │   ├── jpa/
+    │   │   └── QueryDSLConfig.java      ← JPAQueryFactory 빈 등록
+    │   └── openapi/
+    │       ├── OpenApiConfig.java       ← springdoc 루트 OpenAPI 빈
+    │       ├── CustomApiResponse.java   ← 에러코드 선언용 메타 어노테이션
+    │       └── ApiResponseCustomizer.java ← Swagger 에러 응답 예시 자동생성
     ├── errors/
     │   ├── GlobalExceptionHandler.java  ← @RestControllerAdvice 에러 핸들러
     │   └── custom/
-    │       ├── FileStorageException.java
+    │       ├── NotRegisteredException.java
     │       ├── InvalidTokenException.java
-    │       └── NotRegisteredException.java
+    │       ├── DeletedRecordException.java
+    │       ├── DuplicatedRecordException.java
+    │       ├── FileManagedException.java
+    │       └── DuplicatedUserException.java   ← 미사용(dead code, 핸들러도 없음)
     ├── responses/
-    │   └── GlobalRes.java               ← 공통 응답 DTO
+    │   └── GlobalRes.java               ← 공통 응답 DTO (record)
     ├── security/
+    │   ├── constant/                    ← ProviderPolicy, RolePolicy (Enum)
     │   ├── cookie/
     │   │   └── CookieManager.java       ← Refresh Token 쿠키 생성/삭제
     │   ├── filter/
@@ -108,18 +118,16 @@ src/main/java/com/msa4meerkatgram/
     │   │   └── TokenAuthenticationFilter.java ← JWT 검증 필터
     │   └── jwt/
     │       ├── JwtConfig.java           ← JWT 설정값 (@ConfigurationProperties)
-    │       └── JwtTokenProvider.java    ← 토큰 생성·검증·파싱
+    │       └── JwtProvider.java         ← 토큰 생성·검증·파싱
     └── util/
         └── file/
             ├── FileConfig.java          ← 파일 저장 경로 설정
             └── LocalFileManager.java    ← 실제 파일 저장 로직
 
 src/main/resources/
-├── mapper/
-│   ├── auth/AuthMapper.xml
-│   ├── posts/PostMapper.xml
-│   └── user/UserMapper.xml
-└── application.yaml                     ← 환경 설정 (git 제외)
+├── application.yaml                     ← 환경 설정 (dev/default, git에 커밋됨)
+├── application-prod.yaml                ← 운영 환경 설정
+└── dummy/                               ← 개발용 더미 INSERT SQL (기본 비활성)
 ```
 
 ---
@@ -140,106 +148,103 @@ src/main/resources/
 
 ## 4. 요청 처리 흐름 — 회원가입 예시
 
-`POST /api/users` 요청이 들어왔을 때 코드가 실행되는 순서를 따라간다.
+`POST /api/registration` 요청이 들어왔을 때 코드가 실행되는 순서를 따라간다.
 
 ### Step 1. Controller — 요청 수신 및 검증
 
 ```java
-// UserController.java
-@PostMapping("/users")
-public ResponseEntity<GlobalRes<UserRes>> store(
-    @Valid @RequestBody RegistrationReq registrationRequestDTO  // ① @Valid로 입력값 검증
+// AuthController.java
+@PostMapping("/registration")
+public ResponseEntity<GlobalRes<Void>> registration(
+    @Valid @RequestBody RegistrationReq registrationReq  // ① @Valid로 입력값 검증
 ) {
-    UserRes result = userService.store(registrationRequestDTO); // ② Service 호출
+    authService.registration(registrationReq);           // ② Service 호출
 
-    return ResponseEntity.status(200).body(
-        GlobalRes.<UserRes>builder()
-            .code("00")
-            .message("정상 처리")
-            .data(result)
-            .build()                                            // ③ 공통 응답 포장
-    );
+    return ResponseEntity.ok(GlobalRes.success());        // ③ 공통 응답 포장 (data 없음)
 }
 ```
 
-- `@Valid`: `RegistrationReq`의 `@NotBlank` 등 검증 어노테이션을 실행한다. 실패하면 `MethodArgumentNotValidException` 발생 → `GlobalExceptionHandler`가 처리
+- `@Valid`: `RegistrationReq`의 `@NotBlank`/`@Pattern`/`@AssertTrue` 검증 어노테이션을 실행한다. 실패하면 `MethodArgumentNotValidException` 발생 → `GlobalExceptionHandler`가 처리
 - Controller는 비즈니스 로직을 직접 처리하지 않고, Service에 위임만 한다
+- 회원가입은 응답으로 별도 데이터를 돌려주지 않는다(`GlobalRes<Void>`)
 
 ### Step 2. Request DTO — 입력값 정의
 
 ```java
 // RegistrationReq.java
 public record RegistrationReq(
-    @NotBlank(message = "필수항목입니다.") String email,
-    @NotBlank(message = "필수항목입니다.") String password,
-    @NotBlank(message = "필수항목입니다.") String nick,
-    @NotNull(message = "필수항목입니다.")  String profile
-) {}
+    @NotBlank(message = "이메일은 필수 항목입니다.")
+    @Pattern(regexp = "...", message = "허용하지 않는 이메일 양식입니다.")
+    String email,
+
+    @NotBlank(message = "비밀번호는 필수 항목입니다.")
+    @Pattern(regexp = "^[0-9a-zA-Z!@#$%^&*()]{8,20}$", message = "허용하지 않는 비밀번호 양식입니다.")
+    String password,
+
+    @NotBlank(message = "비밀번호 확인은 필수 항목입니다.")
+    String passwordChk,
+
+    @NotBlank(message = "닉네임은 필수 항목입니다.")
+    @Pattern(regexp = "^[0-9a-zA-Z_]{2,20}$", message = "허용하지 않는 닉네임 양식입니다.")
+    String nick,
+
+    @NotBlank(message = "프로필은 필수 항목입니다.")
+    String profile
+) {
+    @AssertTrue(message = "비밀번호와 비밀번호 확인이 일치하지 않습니다.")
+    public boolean isPasswordMatch() {
+        return password != null && password.equals(passwordChk);
+    }
+}
 ```
 
 - Java `record`를 사용해 불변(immutable) DTO를 정의한다
 - getter, equals, hashCode, toString이 자동 생성된다
+- `isPasswordMatch()`처럼 `@AssertTrue`가 붙은 메서드는 `@Valid` 검증 시 함께 실행되는 커스텀 교차검증이다(비밀번호/비밀번호 확인 일치 여부)
 - 요청에서 받는 데이터만 포함하고, Entity(`User`)와는 별개 클래스로 분리한다
 
 ### Step 3. Service — 비즈니스 로직
 
 ```java
-// UserService.java
-@Transactional
-public UserRes store(RegistrationReq req) {
-    // ① 중복 이메일 확인
-    User chkUser = userMapper.findByEmail(req.email());
-    if (chkUser != null) {
-        throw new RuntimeException("이미 가입된 회원입니다.");
+// AuthService.java
+@Transactional(rollbackFor = Exception.class)
+public void registration(RegistrationReq registrationReq) {
+    // ① 중복 이메일 확인 (exists 쿼리 — 대용량 환경에서 findByEmail보다 효율적)
+    if (authRepository.existsByEmail(registrationReq.email())) {
+        throw new DuplicatedRecordException("이미 가입된 회원입니다.");
     }
 
     // ② Entity 생성 및 값 세팅
-    User user = new User();
-    user.setEmail(req.email());
-    user.setPassword(passwordEncoder.encode(req.password())); // BCrypt 암호화
-    user.setNick(req.nick());
-    user.setProfile(req.profile());
-    user.setProvider(ProviderPolicy.NONE.getProvider());
-    user.setRole(RolePolicy.NORMAL.getRole());
+    User newUser = new User();
+    newUser.setEmail(registrationReq.email());
+    newUser.setPassword(passwordEncoder.encode(registrationReq.password())); // BCrypt 암호화
+    newUser.setNick(registrationReq.nick());
+    newUser.setProfile(registrationReq.profile());
+    newUser.setProvider(ProviderPolicy.NONE);
+    newUser.setRole(RolePolicy.NORMAL);
 
     // ③ DB 저장
-    userMapper.create(user);
-
-    // ④ 응답 DTO로 변환 (Entity를 그대로 반환하지 않는다)
-    return UserRes.builder()
-        .id(user.getId())
-        .email(user.getEmail())
-        ...
-        .build();
+    authRepository.save(newUser);
 }
 ```
 
-> Entity(`User`)를 Controller에 직접 반환하지 않는 이유:
-> Entity에는 `password`, `refreshToken` 같이 클라이언트에 노출하면 안 되는 필드가 있다.
-> Response DTO(`UserRes`)로 변환해서 필요한 필드만 반환한다.
+> 회원가입은 응답으로 유저 정보를 돌려주지 않으므로(Void), Entity → Response DTO 변환 과정이 없다.
+> 참고로 로그인(`AuthService.login`)의 경우 `AuthRes.from(user, accessToken, countPosts)`처럼
+> Entity의 `password`, `refreshToken` 같은 민감 필드를 제외한 Response DTO로 변환해서 반환한다.
 
-### Step 4. Mapper — SQL 실행
+### Step 4. Repository — DB 접근 (Spring Data JPA)
 
 ```java
-// UserMapper.java (인터페이스)
-@Mapper
-public interface UserMapper {
-    User findByEmail(String email);
-    int create(User user);
+// AuthRepository.java (인터페이스)
+public interface AuthRepository extends JpaRepository<User, Long> {
+    Optional<User> findByEmail(String email);
+    boolean existsByEmail(String email);
 }
 ```
 
-```xml
-<!-- UserMapper.xml -->
-<insert id="create" useGeneratedKeys="true" keyProperty="id">
-    INSERT INTO users (email, password, nick, provider, role, profile, created_at, updated_at)
-    VALUES (#{email}, #{password}, #{nick}, #{provider}, #{role}, #{profile}, NOW(), NOW())
-</insert>
-```
-
-- `@Mapper`: MyBatis가 이 인터페이스의 구현체를 자동 생성한다
-- SQL은 Java 코드가 아닌 XML에 분리해서 작성한다
-- `useGeneratedKeys="true"`: INSERT 후 DB가 생성한 PK를 `user.id`에 자동 주입
+- `JpaRepository<User, Long>`을 상속하면 `save()`, `findById()`, `count()` 등 기본 CRUD 메서드를 별도 구현 없이 바로 사용할 수 있다
+- `existsByEmail`처럼 메서드 이름 규칙(`exists + By + 필드명`)만 지키면, Spring Data JPA가 이름을 분석해 쿼리를 자동 생성한다(쿼리 메서드)
+- SQL을 직접 작성하지 않아도 되며, INSERT 시 PK 자동 채번은 `User` 엔티티의 `@GeneratedValue(strategy = GenerationType.IDENTITY)`가 처리한다
 
 ---
 
@@ -248,21 +253,47 @@ public interface UserMapper {
 모든 API 응답은 아래 클래스로 포장해서 반환한다.
 
 ```java
-// GlobalRes.java
-@Getter
-@Builder
-public class GlobalRes<T> {
-    private String code;    // 처리 결과 코드
-    private String message; // 처리 결과 메시지
-    private T data;         // 응답 데이터 (제네릭)
+// GlobalRes.java — @Builder 클래스가 아니라 record다
+public record GlobalRes<T>(
+    String code
+    , String message
+    , T data
+) {
+    public static <T> GlobalRes<T> from(CustomResponseCode customResponseCode, T data) {
+        return new GlobalRes<T>(customResponseCode.getCode(), customResponseCode.name(), data);
+    }
+
+    public static GlobalRes<Void> from(CustomResponseCode customResponseCode) {
+        return new GlobalRes<Void>(customResponseCode.getCode(), customResponseCode.name(), null);
+    }
+
+    public static <T> GlobalRes<T> success(T data) {
+        return GlobalRes.<T>from(CustomResponseCode.SUCCESS, data);
+    }
+
+    public static GlobalRes<Void> success() {
+        return GlobalRes.<Void>from(CustomResponseCode.SUCCESS);
+    }
 }
+```
+
+- `record`이므로 `.builder()...build()`가 아니라 정적 팩토리 메서드(`from`, `success`)로 생성한다
+- `message`에는 한글 문장이 아니라 `CustomResponseCode` enum 상수명이 그대로 들어간다(`customResponseCode.name()`)
+
+**Controller에서의 사용 패턴**
+```java
+// 데이터 있는 성공 응답
+return ResponseEntity.ok(GlobalRes.success(result));
+
+// 데이터 없는 성공 응답 (회원가입, 로그아웃 등)
+return ResponseEntity.ok(GlobalRes.success());
 ```
 
 **성공 응답 예시**
 ```json
 {
   "code": "00",
-  "message": "정상 처리",
+  "message": "SUCCESS",
   "data": {
     "id": 1,
     "email": "user@example.com",
@@ -275,8 +306,8 @@ public class GlobalRes<T> {
 ```json
 {
   "code": "E01",
-  "message": "로그인 에러",
-  "data": "이메일 또는 비밀번호를 확인해 주세요."
+  "message": "NOT_REGISTERED_ERROR",
+  "data": null
 }
 ```
 
@@ -290,42 +321,49 @@ public class GlobalRes<T> {
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private ResponseEntity<GlobalRes<Void>> generateErrorResponse(CustomResponseCode customResponseCode) {
+        return ResponseEntity.status(customResponseCode.getHttpStatus())
+            .body(GlobalRes.<Void>from(customResponseCode));
+    }
+
     @ExceptionHandler(NotRegisteredException.class)
-    public ResponseEntity<GlobalRes<String>> authenticationHandle(NotRegisteredException e) {
-        return ResponseEntity.status(401).body(
-            GlobalRes.<String>builder().code("E01").message("로그인 에러").data(e.getMessage()).build()
-        );
+    public ResponseEntity<GlobalRes<Void>> notRegisteredHandle(NotRegisteredException e) {
+        log.debug(CustomResponseCode.NOT_REGISTERED_ERROR.name(), e);
+        return this.generateErrorResponse(CustomResponseCode.NOT_REGISTERED_ERROR);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<GlobalRes<List<String>>> methodArgumentNotValidHandle(MethodArgumentNotValidException e) {
-        return ResponseEntity.status(400).body(
-            GlobalRes.<List<String>>builder()
-                .code("E21")
-                .message("요청 파라미터에 이상이 있습니다.")
-                .data(e.getBindingResult().getAllErrors().stream()
-                    .map(item -> String.format("%s : 잘못된 값입니다.", item.getObjectName()))
-                    .toList())
-                .build()
-        );
+    public ResponseEntity<GlobalRes<Void>> methodArgumentNotValidHandle(MethodArgumentNotValidException e) {
+        // 필드별 오류 메시지는 로깅만 하고, 응답 data는 null로 통일한다
+        Map<String, String> errors = e.getBindingResult().getFieldErrors().stream()
+            .collect(Collectors.toMap(FieldError::getField, fe -> fe.getDefaultMessage(), (a, b) -> a));
+        log.debug(CustomResponseCode.INVALID_PARAMETER_ERROR.name(), errors);
+        return this.generateErrorResponse(CustomResponseCode.INVALID_PARAMETER_ERROR);
     }
     // ... 이하 생략
 }
 ```
+
+- 모든 핸들러가 `data`에 별도 메시지를 담지 않고 공통 `generateErrorResponse()`를 통해 `GlobalRes<Void>`(즉 `data: null`)를 반환한다
+- 예외 상세 메시지는 응답이 아니라 로그(`log.debug`/`log.error`)로만 남긴다 — 클라이언트에 내부 정보를 노출하지 않기 위함
 
 | 예외 클래스 | 구분 | HTTP | 코드 | 발생 상황 |
 |------------|------|------|------|-----------|
 | `NotRegisteredException` | 커스텀 | 401 | E01 | 이메일/비밀번호 불일치 |
 | `AuthenticationException` | Spring Security | 401 | E02 | 인증 토큰 없음 |
 | `AccessDeniedException` | Spring Security | 403 | E03 | 권한 부족 |
-| `InvalidTokenException` | 커스텀 | 400 | E04 | 토큰 형식/서명 오류 |
-| `NoResourceFoundException` | Spring MVC | 404 | E20 | 존재하지 않는 URL |
+| `InvalidTokenException` | 커스텀 | 401 | E04 | 토큰 형식/서명 오류 |
+| `DeletedRecordException` | 커스텀 | 404 | E10 | 조회 대상이 이미 삭제됨/존재하지 않음 |
+| `DuplicatedRecordException` | 커스텀 | 409 | E11 | 이메일 등 중복 데이터 |
 | `MethodArgumentTypeMismatchException` | Spring MVC | 400 | E21 | 경로 변수 타입 오류 (`/posts/abc`) |
 | `MethodArgumentNotValidException` | Spring MVC | 400 | E21 | `@Valid` 검증 실패 |
-| `FileStorageException` | 커스텀 | 400 | E30 | 파일 저장 실패 |
-| `RuntimeException` | Java 표준 | 400 | E30 | 기타 런타임 에러 |
+| `FileManagedException` | 커스텀 | 500 | E40 | 파일 저장/삭제 실패 |
+| `NoResourceFoundException` | Spring MVC | 404 | E50 | 존재하지 않는 URL 요청 |
 | `SQLException` | Java 표준 | 500 | E80 | DB 에러 |
 | `Exception` | Java 표준 | 500 | E99 | 알 수 없는 시스템 에러 |
+
+> 구 버전에 있던 `E20`(존재하지 않는 URL), `E30`(파일/런타임 에러 통합)은 더 이상 사용하지 않는다.
+> 존재하지 않는 URL 처리는 `E50`(`NOT_FOUND_ERROR`)으로 새로 추가되었다.
 
 > `@RestControllerAdvice`는 모든 `@RestController`에서 발생하는 예외를 한 곳에서 처리한다.
 > 각 Controller에 try-catch를 반복하지 않아도 되므로 코드가 간결해진다.

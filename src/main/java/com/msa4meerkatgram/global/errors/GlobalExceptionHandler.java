@@ -1,8 +1,8 @@
 package com.msa4meerkatgram.global.errors;
 
-import com.msa4meerkatgram.global.responses.constant.CustomResponseCode;
 import com.msa4meerkatgram.global.errors.custom.*;
 import com.msa4meerkatgram.global.responses.GlobalRes;
+import com.msa4meerkatgram.global.responses.constant.CustomResponseCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.sql.SQLException;
 import java.util.Map;
@@ -86,6 +87,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<GlobalRes<Void>> fileManagedHandle(FileManagedException e) {
         log.debug(CustomResponseCode.FILE_MANAGED_ERROR.name(), e);
         return this.generateErrorResponse(CustomResponseCode.FILE_MANAGED_ERROR);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<GlobalRes<Void>> notFoundHandle(NoResourceFoundException e) {
+        return this.generateErrorResponse(CustomResponseCode.NOT_FOUND_ERROR);
     }
 
     @ExceptionHandler(SQLException.class)

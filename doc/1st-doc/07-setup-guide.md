@@ -23,16 +23,19 @@ CREATE DATABASE IF NOT EXISTS meerkatgram
     COLLATE utf8mb4_0900_ai_ci;
 ```
 
-### 2-2. 스키마 SQL 실행
+### 2-2. 스키마 생성 — 엔티티 기반 자동 생성 (임시)
 
-프로젝트 루트의 `meerkatgram-scheme.sql` 파일을 실행한다.
+이 프로젝트에는 별도의 스키마 SQL 파일이 없다. `spring.jpa.hibernate.ddl-auto: none`이 기본값이라
+Hibernate가 자동으로 테이블을 만들어주지도 않는다. 로컬 개발 환경에서는 아래 절차로 **일시적으로만**
+`ddl-auto`를 켜서 엔티티(`User`, `Post`) 기준으로 테이블을 생성한다.
 
-```bash
-# MySQL CLI로 직접 실행
-mysql -u {username} -p meerkatgram < meerkatgram-scheme.sql
-```
+1. `application.yaml`의 `spring.jpa.hibernate.ddl-auto` 값을 `none`에서 `update`(또는 `create`)로 임시 변경한다.
+2. 애플리케이션을 한 번 기동한다(`./gradlew bootRun`). Hibernate가 엔티티를 스캔해서 `users`, `posts` 테이블을 자동 생성한다.
+3. DB 클라이언트(HeidiSQL/DBeaver 등)로 테이블이 정상 생성됐는지 확인한다.
+4. **테이블 생성을 확인했으면 `ddl-auto` 값을 반드시 다시 `none`으로 되돌린다.**
 
-또는 IntelliJ / HeidiSQL / DBeaver의 SQL 편집기에서 파일을 열어 실행한다.
+> ⚠️ `update`/`create`는 로컬 개발 시 스키마를 처음 세팅할 때만 쓰는 임시 조치다.
+> 운영 환경(`application-prod.yaml`)에서는 절대 `update`/`create`를 사용하지 않는다 — 의도치 않은 컬럼 변경/데이터 손실 위험이 있다.
 
 **생성되는 테이블**
 
@@ -40,17 +43,19 @@ mysql -u {username} -p meerkatgram < meerkatgram-scheme.sql
 |--------|-------------|
 | `users` | O |
 | `posts` | O |
-| `comments` | v2 예정 |
-| `likes` | v2 예정 |
-| `notifications` | v2 예정 |
-| `push_subscriptions` | v2 예정 |
+| `comments` | v2 예정 (미구현, 엔티티 없음) |
+| `likes` | v2 예정 (미구현, 엔티티 없음) |
+| `notifications` | v2 예정 (미구현, 엔티티 없음) |
+| `push_subscriptions` | v2 예정 (미구현, 엔티티 없음) |
 
 ---
 
 ## 3. `application.yaml` 설정
 
-> 실제 파일은 git에서 제외(`application.yaml`, `application.prod.yaml`)되어 있으므로 직접 생성해야 한다.
-> `src/main/resources/application.yaml` 경로에 아래 구조를 참고하여 작성한다.
+> `application.yaml`(dev/default), `application-prod.yaml`(prod)은 개발용 기본값을 포함한 채 **git에 커밋되어 있다**.
+> 대부분의 값은 `${DB_HOST:localhost}`처럼 환경변수 오버라이드 + 기본값 형태이므로, 로컬 개발 시에는 별도 생성 없이도
+> 바로 실행 가능하다. `security.jwt.secret`처럼 민감한 값을 바꾸고 싶다면 아래 구조를 참고해 직접 값을 채우거나
+> 환경변수로 오버라이드한다.
 
 ```yaml
 spring:
@@ -63,12 +68,20 @@ spring:
   servlet:
     multipart:
       max-file-size: 10MB      # 단일 파일 최대 크기
-      max-request-size: 50MB   # 요청 전체 최대 크기
+      max-request-size: 20MB   # 요청 전체 최대 크기
 
-mybatis:
-  mapper-locations: classpath:mapper/**/*.xml
-  configuration:
-    map-underscore-to-camel-case: false  # ResultMap을 직접 사용하므로 false
+  jpa:
+    hibernate:
+      ddl-auto: none            # 스키마는 자동 생성하지 않음 (§2-2의 임시 절차 참고)
+    show-sql: true
+    format_sql: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+  api-docs:
+    path: /api-docs
 
 security:
   jwt:
@@ -82,13 +95,20 @@ security:
     secret: {Base64로 인코딩된 256비트 이상 비밀키}
     header-key: Authorization
     scheme: Bearer
-    reiss-uri: {토큰 재발급 논리 주소}
+    reissue-uri: /api/reissue-token
 
 file:
   storage-path: {파일 저장 루트 절대 경로}   # 예: /app/storage 또는 C:/meerkatgram/storage
-  profile-path: /images/profiles
-  post-path: /images/posts
+  profile-path: /files/profiles
+  post-path: /files/posts
   server-uri: http://localhost:8080
+  allow-extension-list:
+    - image/jpg
+    - image/jpeg
+    - image/png
+    - image/gif
+    - image/svg
+    - image/webp
 
 cors:
   allowed-origins:
@@ -152,7 +172,7 @@ curl http://localhost:8080/api/posts
 ```json
 {
   "code": "00",
-  "message": "정상처리",
+  "message": "SUCCESS",
   "data": { "total": 0, "lastPage": true, "posts": [] }
 }
 ```
@@ -164,20 +184,21 @@ curl http://localhost:8080/api/posts
 ### 회원가입 전 프로필 이미지 업로드
 
 ```bash
-curl -X POST http://localhost:8080/api/images/profiles \
+curl -X POST http://localhost:8080/api/files/profiles \
   -F "file=@/path/to/image.jpg"
 ```
 
 ### 회원가입
 
 ```bash
-curl -X POST http://localhost:8080/api/users \
+curl -X POST http://localhost:8080/api/registration \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
     "password": "pass1234!",
+    "passwordChk": "pass1234!",
     "nick": "meerkat",
-    "profile": "http://localhost:8080/images/profiles/20250101_uuid.jpg"
+    "profile": "http://localhost:8080/files/profiles/20250101_uuid.jpg"
   }'
 ```
 
@@ -203,7 +224,7 @@ curl -X POST http://localhost:8080/api/posts \
   -H "Authorization: Bearer {로그인 응답의 accessToken}" \
   -d '{
     "content": "오늘의 한 컷",
-    "image": "http://localhost:8080/images/posts/20250101_uuid.jpg"
+    "image": "http://localhost:8080/files/posts/20250101_uuid.jpg"
   }'
 ```
 
@@ -250,7 +271,7 @@ Access to fetch at 'http://localhost:8080/...' from origin 'http://localhost:517
 
 ---
 
-### 파일 업로드 실패 (`FileStorageException`)
+### 파일 업로드 실패 (`FileManagedException`)
 
 - `file.storage-path`가 서버에 실제로 존재하는 경로인지 확인
 - 해당 경로에 쓰기 권한이 있는지 확인

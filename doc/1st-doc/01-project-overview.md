@@ -25,20 +25,20 @@
 POST   /api/login              - 로그인 (Access Token 발급)
 POST   /api/reissue-token      - Access Token 재발급
 POST   /api/logout             - 로그아웃
+POST   /api/registration       - 회원가입
 
 [유저]
-POST   /api/users              - 회원가입
-GET    /api/users/{id}         - 유저 정보 조회
+(공개 엔드포인트 없음 — UserController는 빈 스텁. 유저 정보는 Auth/게시글 응답에 중첩되어서만 노출된다)
 
 [게시글]
 GET    /api/posts              - 게시글 목록 (페이지네이션)
-GET    /api/posts/{id}         - 게시글 상세
+GET    /api/posts/{id}         - 게시글 상세 (인증 필요)
 POST   /api/posts              - 게시글 작성 (인증 필요)
-DELETE /api/posts/{id}         - 게시글 삭제 (인증 필요)
+DELETE /api/posts/{id}         - 게시글 삭제 (인증 필요, 미구현)
 
 [파일]
-POST   /api/images/posts       - 게시글 이미지 업로드
-POST   /api/images/profiles    - 프로필 이미지 업로드
+POST   /api/files/posts        - 게시글 이미지 업로드
+POST   /api/files/profiles     - 프로필 이미지 업로드
 ```
 
 ---
@@ -48,10 +48,11 @@ POST   /api/images/profiles    - 프로필 이미지 업로드
 | 영역 | 기술 | 버전 | 선택 이유 |
 |------|------|------|-----------|
 | 언어 | Java | 17 | LTS 버전. Records, sealed class 등 현대적 문법 지원 |
-| 프레임워크 | Spring Boot | 3.5 | 자동 설정, 내장 서버, 풍부한 생태계 |
+| 프레임워크 | Spring Boot | 3.5.15-SNAPSHOT | 자동 설정, 내장 서버, 풍부한 생태계 (※ `repo.spring.io/snapshot`에서 받아오는 스냅샷 빌드, 정식 GA 릴리즈 아님) |
 | 인증/보안 | Spring Security | (Boot 내장) | 필터 체인 기반 인증 처리 표준 |
 | JWT 라이브러리 | jjwt | 0.12.6 | Java 생태계 표준 JWT 라이브러리 |
-| ORM/SQL | MyBatis | 3.0.5 | SQL을 직접 제어하면서 Java 객체와 매핑. JPA 대비 SQL 가시성 높음 |
+| ORM/SQL | Spring Data JPA + QueryDSL | querydsl 5.1.0 (jakarta) | 엔티티 기반 CRUD는 Spring Data JPA, 동적/복잡 조회는 QueryDSL로 분담. MyBatis는 완전히 제거됨 |
+| API 문서화 | springdoc-openapi | 2.8.16 | `@Operation`/`@Schema` 등 어노테이션으로 Swagger UI(`/swagger-ui.html`) 자동 생성 |
 | 데이터베이스 | MySQL | 8.4 | 관계형 DB 표준, 실무 사용률 높음 |
 | 유효성 검사 | Spring Validation | (Boot 내장) | 어노테이션 기반 입력값 검증 |
 | 코드 간소화 | Lombok | (최신) | getter/setter/생성자 보일러플레이트 제거 |
@@ -80,7 +81,7 @@ Client (Vue 3 / Postman)
 [Service Layer]                      ← 비즈니스 로직 처리
     │
     ▼
-[Mapper Layer (MyBatis)]             ← SQL 실행, 결과 객체 매핑
+[Repository Layer (Spring Data JPA + QueryDSL)]   ← 엔티티 CRUD / 동적 조회
     │
     ▼
 [MySQL Database]
@@ -126,7 +127,7 @@ Controller (@AuthenticationPrincipal Claims claims)
     │                ↑
     │  claims.getSubject() 로 userId 획득
     ▼
-Service → Mapper → DB
+Service → Repository (JPA) → DB
 ```
 
 ---
@@ -138,7 +139,7 @@ Service → Mapper → DB
 ```json
 {
   "code": "00",
-  "message": "정상 처리",
+  "message": "SUCCESS",
   "data": { ... }
 }
 ```
@@ -146,5 +147,5 @@ Service → Mapper → DB
 | 필드 | 타입 | 설명 |
 |------|------|------|
 | `code` | String | 처리 결과 코드. `"00"` = 성공 |
-| `message` | String | 처리 결과 메시지 |
+| `message` | String | 처리 결과 메시지. `CustomResponseCode` enum 상수명이 그대로 들어간다(예: `"SUCCESS"`, `"NOT_REGISTERED_ERROR"`). 한글 문장이 아니다 |
 | `data` | T (제네릭) | 응답 데이터. 없으면 `null` |
