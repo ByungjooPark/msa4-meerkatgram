@@ -11,11 +11,11 @@
 └────────────────┬────────────────────┘
                  │ HTTP 요청
 ┌────────────────▼────────────────────┐
-│      Filter Layer (Spring Security) │  JWT 검증, 인증/인가
+│      Filter Layer (Spring Security) │  JWT 검증 (인증), SecurityContext 등록
 └────────────────┬────────────────────┘
                  │
 ┌────────────────▼────────────────────┐
-│       Controller Layer              │  요청 수신, 입력값 검증, 응답 반환
+│       Controller Layer              │  @PreAuthorize 인가 체크, 요청 수신, 입력값 검증, 응답 반환
 └────────────────┬────────────────────┘
                  │
 ┌────────────────▼────────────────────┐
@@ -33,8 +33,8 @@
 
 | 레이어 | 책임 | 금지 사항 |
 |--------|------|-----------|
-| Filter | JWT 토큰 검증, SecurityContext 등록 | 비즈니스 로직 처리 |
-| Controller | HTTP 요청 수신·응답 반환, `@Valid` 검증 | SQL 직접 실행, 비즈니스 로직 |
+| Filter | JWT 토큰 검증(인증), SecurityContext 등록 | 인가(역할) 판단, 비즈니스 로직 처리 |
+| Controller | `@PreAuthorize` 인가 체크, HTTP 요청 수신·응답 반환, `@Valid` 검증 | SQL 직접 실행, 비즈니스 로직 |
 | Service | 비즈니스 로직, 트랜잭션 관리 | HTTP 관련 코드 (`HttpServletRequest` 등) |
 | Repository | 엔티티 CRUD(Spring Data JPA), 동적 조회(QueryDSL) | 비즈니스 로직 |
 
@@ -111,10 +111,8 @@ src/main/java/com/msa4meerkatgram/
     │   ├── cookie/
     │   │   └── CookieManager.java       ← Refresh Token 쿠키 생성/삭제
     │   ├── filter/
-    │   │   ├── SecurityConfiguration.java     ← FilterChain 설정
-    │   │   ├── SecurityAuthenticationProvider.java
-    │   │   ├── SecurityExceptionHandler.java  ← 인증/인가 실패 처리
-    │   │   ├── SecurityUrlRegistry.java       ← 공개/인증필요 URL 목록
+    │   │   ├── SecurityConfiguration.java     ← FilterChain 설정, @EnableMethodSecurity로 @PreAuthorize 활성화
+    │   │   ├── SecurityAuthenticationProvider.java ← Claims의 role을 SimpleGrantedAuthority로 변환
     │   │   └── TokenAuthenticationFilter.java ← JWT 검증 필터
     │   └── jwt/
     │       ├── JwtConfig.java           ← JWT 설정값 (@ConfigurationProperties)
@@ -350,8 +348,7 @@ public class GlobalExceptionHandler {
 | 예외 클래스 | 구분 | HTTP | 코드 | 발생 상황 |
 |------------|------|------|------|-----------|
 | `NotRegisteredException` | 커스텀 | 401 | E01 | 이메일/비밀번호 불일치 |
-| `AuthenticationException` | Spring Security | 401 | E02 | 인증 토큰 없음 |
-| `AccessDeniedException` | Spring Security | 403 | E03 | 권한 부족 |
+| `AccessDeniedException` | Spring Security | 401 또는 403 | E02 또는 E03 | `@PreAuthorize` 인가 실패. 익명 사용자(미로그인)면 E02(401), 로그인은 했으나 역할 부족이면 E03(403) — `SecurityContext`의 인증 객체를 보고 핸들러가 직접 분기 |
 | `InvalidTokenException` | 커스텀 | 401 | E04 | 토큰 형식/서명 오류 |
 | `DeletedRecordException` | 커스텀 | 404 | E10 | 조회 대상이 이미 삭제됨/존재하지 않음 |
 | `DuplicatedRecordException` | 커스텀 | 409 | E11 | 이메일 등 중복 데이터 |

@@ -316,12 +316,15 @@ Authorization: Bearer {accessToken}
 
 ---
 
-### 6-3. 게시글 작성 `🔒 인증 필요`
+### 6-3. 게시글 작성 `🔒 SUPER 권한 필요`
 
 ```
 POST /api/posts
 Authorization: Bearer {accessToken}
 ```
+
+> `@PreAuthorize("hasRole('SUPER')")`로 보호된다 — **NORMAL role인 일반 사용자는 로그인해도 호출할 수 없다.**
+> (`05-auth-jwt-guide.md` 5번 항목 참고)
 
 **Request Body**
 
@@ -344,6 +347,7 @@ Authorization: Bearer {accessToken}
 | 상황 | code | HTTP |
 |------|------|------|
 | 인증 토큰 없음 | `E02` | 401 |
+| 로그인은 했으나 SUPER가 아님(NORMAL) | `E03` | 403 |
 | 토큰 오류/만료 | `E04` | 401 |
 | 필수 필드 누락 | `E21` | 400 |
 
@@ -356,8 +360,12 @@ DELETE /api/posts/{id}
 Authorization: Bearer {accessToken}
 ```
 
-> **현재 컨트롤러에 해당 메서드 자체가 없다.** `SecurityUrlRegistry`에는 인증 필요 URL로 등록되어 있지만
-> 실제 라우트가 없어 호출 시 404가 반환된다. 아래 스펙은 구현 예정 설계안이다.
+> **현재 컨트롤러에 해당 메서드 자체가 없다.** 호출 시 라우트가 없어 404가 반환된다. 아래 스펙은 구현
+> 예정 설계안이다.
+> (과거에는 URL 목록을 중앙관리하는 `SecurityUrlRegistry`에 이 경로가 "인증 필요"로 등록만 되어 있고
+> 실제 구현은 없는 상태였다. 지금은 인가를 `@PreAuthorize`로 각 메서드에 직접 선언하는 방식으로
+> 바뀌었으므로, 메서드가 없으면 애초에 인가 설정 자체도 존재하지 않는다 — `05-auth-jwt-guide.md`
+> 5번 항목 참고.)
 
 | 파라미터 | 위치 | 타입 | 제약 |
 |----------|------|------|------|

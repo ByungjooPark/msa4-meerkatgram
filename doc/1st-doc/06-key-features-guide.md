@@ -367,21 +367,20 @@ public record CorsConfig(
 ```
 
 ```java
-// SecurityConfiguration.java
-@Bean
-public CorsConfigurationSource corsConfigurationSource() {
-    CorsConfiguration configuration = new CorsConfiguration();
-    configuration.setAllowedOrigins(corsConfig.allowedOrigins()); // e.g. ["http://localhost:5173"]
-    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-    configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
-    configuration.setAllowCredentials(true); // 쿠키(Refresh Token) 전송 허용
-    configuration.setMaxAge(corsConfig.maxAge());
-
-    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    source.registerCorsConfiguration("/**", configuration);
-    return source;
-}
+// SecurityConfiguration.java — filterChain() 안에서 인라인 람다로 구성 (별도 @Bean 아님)
+.cors(cors -> cors.configurationSource(request -> {
+    CorsConfiguration config = new CorsConfiguration();
+    config.setAllowedOrigins(corsConfig.allowedOrigins()); // e.g. ["http://localhost:5173"]
+    config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+    config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+    config.setAllowCredentials(true); // 쿠키(Refresh Token) 전송 허용
+    config.setMaxAge(corsConfig.maxAge());
+    return config;
+}))
 ```
+
+> 이전에는 `corsConfigurationSource()`라는 별도 `@Bean`으로 분리되어 있었지만, 현재는
+> `filterChain()` 안에서 인라인 람다로 직접 구성한다 (`05-auth-jwt-guide.md` 4번 항목 참고).
 
 > `setAllowCredentials(true)` 설정이 필요한 이유:
 > Refresh Token을 HttpOnly 쿠키로 전송하는데, 쿠키는 `credentials`에 해당한다.

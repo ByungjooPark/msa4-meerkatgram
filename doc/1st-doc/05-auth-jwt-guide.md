@@ -97,60 +97,108 @@ Client                          Server
 
 ```java
 // SecurityConfiguration.java
-@Bean
-public SecurityFilterChain filterChain(HttpSecurity http,
-    SecurityExceptionHandler securityExceptionHandler,
-    TokenAuthenticationFilter tokenAuthenticationFilter) throws Exception {
+@EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true) // ← @PreAuthorize 활성화
+@RequiredArgsConstructor
+public class SecurityConfiguration {
 
-    return http
-        // ① 세션을 사용하지 않음 (JWT는 무상태)
-        .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        // ② SSR 방식이 아니므로 화면 관련 기능 모두 비활성화
-        .httpBasic(AbstractHttpConfigurer::disable)
-        .formLogin(AbstractHttpConfigurer::disable)
-        .csrf(AbstractHttpConfigurer::disable)
-        // ③ CORS 설정 적용
-        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-        // ④ 커스텀 JWT 필터를 UsernamePasswordAuthenticationFilter 앞에 삽입
-        .addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-        // ⑤ URL별 인증 요구 설정
-        .authorizeHttpRequests(req ->
-            req.requestMatchers(HttpMethod.GET, SecurityUrlRegistry.AUTH_REQUIRED_GET_URLS).authenticated()
-               .requestMatchers(HttpMethod.POST, SecurityUrlRegistry.AUTH_REQUIRED_POST_URLS).authenticated()
-               .requestMatchers(HttpMethod.PUT, SecurityUrlRegistry.AUTH_REQUIRED_PUT_URLS).authenticated()
-               .requestMatchers(HttpMethod.PATCH, SecurityUrlRegistry.AUTH_REQUIRED_PATCH_URLS).authenticated()
-               .requestMatchers(HttpMethod.DELETE, SecurityUrlRegistry.AUTH_REQUIRED_DELETE_URLS).authenticated()
-               .anyRequest().permitAll()
-        )
-        // ⑥ 인증/인가 실패 시 처리할 핸들러 등록
-        .exceptionHandling(e -> e
-            .authenticationEntryPoint(securityExceptionHandler)   // 401 처리
-            .accessDeniedHandler(securityExceptionHandler)        // 403 처리
-        )
-        .build();
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http,
+        TokenAuthenticationFilter tokenAuthenticationFilter) throws Exception {
+
+        return http
+            // ① 세션을 사용하지 않음 (JWT는 무상태)
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // ② SSR 방식이 아니므로 화면 관련 기능 모두 비활성화
+            .httpBasic(AbstractHttpConfigurer::disable)
+            .formLogin(AbstractHttpConfigurer::disable)
+            .csrf(AbstractHttpConfigurer::disable)
+            // ③ CORS 설정 적용 (인라인 람다로 직접 구성)
+            .cors(cors -> cors.configurationSource(request -> {
+                CorsConfiguration config = new CorsConfiguration();
+                config.setAllowedOrigins(corsConfig.allowedOrigins());
+                config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+                config.setAllowedHeaders(List.of(HttpHeaders.AUTHORIZATION, HttpHeaders.CONTENT_TYPE, HttpHeaders.ACCEPT));
+                config.setAllowCredentials(true);
+                config.setMaxAge(corsConfig.maxAge());
+                return config;
+            }))
+            // ④ 커스텀 JWT 필터를 UsernamePasswordAuthenticationFilter 앞에 삽입
+            .addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            // ⑤ 필터 체인 레벨에서는 전부 허용 — 인증/인가는 각 컨트롤러 메서드의 @PreAuthorize가 담당
+            .authorizeHttpRequests(req -> req.anyRequest().permitAll())
+            .build();
+    }
 }
 ```
+
+> URL 패턴별로 인증 요구사항을 나열하던 `authorizeHttpRequests` 설정과, 401/403을 처리하던
+> `exceptionHandling(...)` 핸들러 등록이 사라졌다. 인가 판단 자체를 필터 체인에서 메서드 레벨
+> `@PreAuthorize`로 옮겼기 때문이다 (아래 5번 항목 참고).
 
 ---
 
-## 5. `SecurityUrlRegistry` — 인증 필요 URL 목록
+## 5. 메서드 시큐리티(`@PreAuthorize`) — 엔드포인트별 인가 설정
+
+인증/인가 필요 여부를 URL 목록 하나로 중앙관리하던 `SecurityUrlRegistry`는 제거되었다. 대신
+`SecurityConfiguration`에 `@EnableMethodSecurity(prePostEnabled = true)`를 선언하고, 각 컨트롤러
+메서드에 `@PreAuthorize`를 직접 붙여 인증/역할(Role) 조건을 표현한다.
 
 ```java
-// SecurityUrlRegistry.java
-public final class SecurityUrlRegistry {
-    private SecurityUrlRegistry() {} // 인스턴스 생성 방지
+// AuthController.java
+@PreAuthorize("isAuthenticated()")
+@PostMapping("/logout")
+public ResponseEntity<GlobalRes<Void>> logout(...) { ... }
 
-    // 블랙리스트 (인증이 반드시 필요)
-    public static final String[] AUTH_REQUIRED_GET_URLS    = { "/api/posts/{id}" };
-    public static final String[] AUTH_REQUIRED_POST_URLS   = { "/api/logout", "/api/posts" };
-    public static final String[] AUTH_REQUIRED_PUT_URLS    = {};
-    public static final String[] AUTH_REQUIRED_PATCH_URLS  = {};
-    public static final String[] AUTH_REQUIRED_DELETE_URLS = { "/api/posts/{id}" };
+// PostController.java
+@PreAuthorize("hasAnyRole('SUPER', 'NORMAL')")
+@GetMapping("/posts/{id}")
+public ResponseEntity<GlobalRes<PostWithUserRes>> show(...) { ... }
+
+@PreAuthorize("hasRole('SUPER')")
+@PostMapping("/posts")
+public ResponseEntity<GlobalRes<PostWithUserRes>> store(...) { ... }
+```
+
+| 엔드포인트 | `@PreAuthorize` | 의미 |
+|---|---|---|
+| `POST /api/logout` | `isAuthenticated()` | 로그인 여부만 확인 |
+| `GET /api/posts/{id}` | `hasAnyRole('SUPER', 'NORMAL')` | 현재 존재하는 Role이 이 둘뿐이라 사실상 로그인 여부만 확인하는 것과 동일 |
+| `POST /api/posts` | `hasRole('SUPER')` | **NORMAL 사용자는 게시글을 작성할 수 없다** — 이전(URL Registry, "인증 필요"만 확인)과 달라진 부분(`04-api-specification.md` 6-3 참고) |
+
+> `hasRole(x)`는 내부적으로 `"ROLE_" + x` 형태의 authority를 찾는다(`hasAuthority`는 접두사 없이 그대로 비교).
+> 그래서 `hasAuthority('SUPER')`/`hasAnyAuthority(...)`에서 `hasRole('SUPER')`/`hasAnyRole(...)`로 바꾸면서,
+> `SecurityAuthenticationProvider`가 만드는 authority 값도 `"SUPER"`에서 `"ROLE_SUPER"`로 함께 바꿔야 했다(7번 항목 참고).
+
+> `@PreAuthorize`가 없는 엔드포인트(`GET /api/posts`, `/api/login`, `/api/reissue-token`, `/api/registration`)는
+> 필터 체인 설정(`anyRequest().permitAll()`)이 그대로 적용되어 인증 없이 호출 가능하다.
+
+**인가 실패 시 401/403 분기 (`GlobalExceptionHandler`)**
+
+필터 체인이 전부 `permitAll`이 되면서, 인증되지 않은 요청도 필터 단계가 아니라 `@PreAuthorize` 평가
+시점(AOP)에서 걸린다. 이때 Spring Security는 "미로그인"과 "역할 부족"을 구분하지 않고 동일하게
+`AccessDeniedException`을 던진다 — 이전에 있던 `AuthenticationException` 전용 핸들러는 더 이상
+호출되지 않는다. 그래서 `GlobalExceptionHandler.accessDeniedHandle()`이 `SecurityContext`의 인증
+객체를 직접 검사해서 401/403을 나눈다.
+
+```java
+// GlobalExceptionHandler.java
+@ExceptionHandler(AccessDeniedException.class)
+public ResponseEntity<GlobalRes<Void>> accessDeniedHandle(AccessDeniedException e) {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+    // 로그인하지 않은 익명 사용자가 접근한 경우 (인증 실패 - 401)
+    if (authentication instanceof AnonymousAuthenticationToken) {
+        return this.generateErrorResponse(CustomResponseCode.UNAUTHENTICATED_ERROR); // E02
+    }
+
+    // 로그인은 했으나 권한(Role)이 부족한 경우 (인가 실패 - 403)
+    return this.generateErrorResponse(CustomResponseCode.UNAUTHORIZED_ERROR); // E03
 }
 ```
 
-> 인증이 필요한 URL을 한 파일에 모아 관리하면, Security 설정(`SecurityConfiguration`)과 URL 목록의 관심사를 분리할 수 있다.
-> `AUTH_REQUIRED_DELETE_URLS`에 `/api/posts/{id}`가 등록되어 있지만, 실제 컨트롤러에는 DELETE 핸들러가 없다(`04-api-specification.md`의 6-4 참고) — 등록만 되어 있고 라우트가 없는 상태.
+> 토큰이 없는 요청에는 Spring Security가 기본으로 `AnonymousAuthenticationToken`을 채워 넣는다.
+> 그 타입 여부로 "로그인 안 함(401)"과 "로그인은 했지만 역할 부족(403)"을 구분할 수 있는 것이다.
 
 ---
 
@@ -191,7 +239,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
 **포인트:**
 - `OncePerRequestFilter`: 하나의 HTTP 요청에서 단 한 번만 실행되도록 보장
-- 토큰이 없어도 예외를 던지지 않는다. 인증 없이 다음 필터로 넘기고, `authorizeHttpRequests`에서 인증 필요 여부를 최종 판단한다
+- 토큰이 없어도 예외를 던지지 않는다. 인증 없이 다음 필터로 넘기고, 인증/역할 필요 여부는 각 컨트롤러 메서드의 `@PreAuthorize`가 최종 판단한다
 - 토큰이 있지만 오류가 있는 경우만 예외 처리를 한다
 
 ---
@@ -205,18 +253,32 @@ public class SecurityAuthenticationProvider {
     private final JwtProvider jwtProvider;
 
     public Authentication authentication(String token) {
+        Claims claims = jwtProvider.extractClaims(token);
+
         // 토큰 검증 후 Claims 객체를 principal(사용자 정보)로 등록
         return new UsernamePasswordAuthenticationToken(
-            jwtProvider.extractClaims(token), // principal = Claims
-            null,                                   // credentials (불필요)
-            List.of()                               // authorities (권한 목록, 미사용)
+            claims,                                  // principal = Claims
+            null,                                    // credentials (불필요)
+            getAuthorityFromClaims(claims)            // authorities (Claims의 role 클레임에서 추출)
         );
+    }
+
+    private List<SimpleGrantedAuthority> getAuthorityFromClaims(Claims claims) {
+        Object role = claims.get("role");
+        if (role != null) {
+            return List.of(new SimpleGrantedAuthority("ROLE_" + role.toString()));
+        }
+        return List.of();
     }
 }
 ```
 
 > Controller에서 `@AuthenticationPrincipal Claims claims`로 꺼낼 수 있는 이유가 여기에 있다.
 > `UsernamePasswordAuthenticationToken`의 첫 번째 인자(principal)에 `Claims` 객체를 넣었기 때문이다.
+> 이전에는 `authorities`가 항상 빈 `List.of()`였지만, 이제 JWT의 `role` 클레임을 `SimpleGrantedAuthority`로
+> 변환해 넣는다 — `@PreAuthorize("hasRole('SUPER')")` 같은 역할 기반 인가가 이 값으로 동작한다.
+> `"ROLE_"` 접두사를 직접 붙이는 이유: `hasRole(x)`는 내부적으로 authority 문자열이 `"ROLE_" + x`인지
+> 비교하기 때문에, 접두사 없이 `"SUPER"`만 넣으면 `hasRole('SUPER')`가 항상 실패한다.
 
 ---
 

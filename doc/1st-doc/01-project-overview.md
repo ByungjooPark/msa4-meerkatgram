@@ -71,11 +71,13 @@ Client (Vue 3 / Postman)
     ▼
 [Spring Security Filter Chain]
     │
-    ├─ TokenAuthenticationFilter     ← JWT 토큰 검증, SecurityContext에 사용자 정보 등록
-    ├─ SecurityExceptionHandler       ← 인증/인가 실패 시 에러 응답 반환
-    │
+    ├─ TokenAuthenticationFilter     ← JWT 토큰 검증, SecurityContext에 사용자 정보(+권한) 등록
+    │                                   (토큰이 없어도 차단하지 않고 다음 단계로 통과)
     ▼
-[Controller Layer]                   ← HTTP 요청 수신, 입력값 검증 (@Valid)
+[Controller Layer]                   ← HTTP 요청 수신
+    ├─ @PreAuthorize (Method Security AOP) ← 인증/역할(Role) 기반 인가 체크
+    │                                        실패 시 AccessDeniedException → GlobalExceptionHandler가 401/403 분기
+    ├─ 입력값 검증 (@Valid)
     │
     ▼
 [Service Layer]                      ← 비즈니스 로직 처리
@@ -118,9 +120,15 @@ Client
     │  Authorization: Bearer {accessToken}
     ▼
 TokenAuthenticationFilter
-    ├─ 토큰 없음 → 401 Unauthorized
-    ├─ 토큰 만료 → 401 Unauthorized
-    └─ 토큰 유효 → Claims(사용자 정보)를 SecurityContext에 등록
+    ├─ 토큰 없음 → 인증 정보 없이 통과 (필터 단계에서는 차단하지 않음)
+    ├─ 토큰 만료/위조 → 예외 발생 → GlobalExceptionHandler가 401(E04) 응답
+    └─ 토큰 유효 → Claims(사용자 정보) + 권한(role)을 SecurityContext에 등록
+    │
+    ▼
+@PreAuthorize 평가 (Controller 진입 시 AOP)
+    ├─ 인증 안 됨 → AccessDeniedException → 401(E02)
+    ├─ 역할(Role) 부족 → AccessDeniedException → 403(E03)
+    └─ 통과 → 컨트롤러 메서드 실행
     │
     ▼
 Controller (@AuthenticationPrincipal Claims claims)
@@ -129,6 +137,10 @@ Controller (@AuthenticationPrincipal Claims claims)
     ▼
 Service → Repository (JPA) → DB
 ```
+
+> 인증(로그인 여부)과 인가(역할)를 필터 단계가 아니라 각 컨트롤러 메서드의 `@PreAuthorize`가 판단한다.
+> 인증 실패든 역할 부족이든 Spring Security 내부적으로는 동일하게 `AccessDeniedException`이 던져지므로,
+> 401/403 구분은 `GlobalExceptionHandler`가 `SecurityContext`의 인증 객체가 익명(`AnonymousAuthenticationToken`)인지 보고 판단한다.
 
 ---
 
