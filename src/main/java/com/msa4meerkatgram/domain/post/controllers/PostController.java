@@ -16,6 +16,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,6 +46,7 @@ public class PostController {
         ,CustomResponseCode.DB_ERROR
         ,CustomResponseCode.SYSTEM_ERROR
     })
+    @PreAuthorize("hasAnyAuthority('SUPER', 'NORMAL')")
     @GetMapping("/posts/{id}")
     public ResponseEntity<GlobalRes<PostWithUserRes>> show(
         @Parameter(description = "게시글 번호", example = "1") @Min(value = 1, message = "1이상 숫자만 허용합니다.") @PathVariable long id
@@ -60,6 +62,7 @@ public class PostController {
             ,CustomResponseCode.DB_ERROR
             ,CustomResponseCode.SYSTEM_ERROR
     })
+    @PreAuthorize("hasAuthority('SUPER')")
     @PostMapping("/posts")
     public ResponseEntity<GlobalRes<PostWithUserRes>> store(
         @Valid @RequestBody PostStoreReq postStoreReq

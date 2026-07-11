@@ -6,7 +6,9 @@ import com.msa4meerkatgram.global.responses.constant.CustomResponseCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -32,15 +34,18 @@ public class GlobalExceptionHandler {
         return this.generateErrorResponse(CustomResponseCode.NOT_REGISTERED_ERROR);
     }
 
-    @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<GlobalRes<Void>> authenticationHandle(AuthenticationException e) {
-        log.debug(CustomResponseCode.UNAUTHENTICATED_ERROR.name(), e);
-        return this.generateErrorResponse(CustomResponseCode.UNAUTHENTICATED_ERROR);
-    }
-
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<GlobalRes<Void>> accessDeniedHandle(AccessDeniedException e) {
         log.debug(CustomResponseCode.UNAUTHORIZED_ERROR.name(), e);
+        // 현재 로그인한 사용자의 정보를 컨텍스트에서 확인
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // 로그인하지 않은 익명 사용자가 접근한 경우 (인증 실패 - 401)
+        if (authentication instanceof AnonymousAuthenticationToken) {
+            return this.generateErrorResponse(CustomResponseCode.UNAUTHENTICATED_ERROR); // E02
+        }
+
+        // 로그인은 했으나 권한(Role)이 부족한 경우 (인가 실패 - 403)
         return this.generateErrorResponse(CustomResponseCode.UNAUTHORIZED_ERROR);
     }
 
