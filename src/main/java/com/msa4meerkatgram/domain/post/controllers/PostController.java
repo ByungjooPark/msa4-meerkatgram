@@ -46,7 +46,7 @@ public class PostController {
         ,CustomResponseCode.DB_ERROR
         ,CustomResponseCode.SYSTEM_ERROR
     })
-    @PreAuthorize("hasAnyAuthority('SUPER', 'NORMAL')")
+    @PreAuthorize("hasAnyRole('SUPER', 'NORMAL')")
     @GetMapping("/posts/{id}")
     public ResponseEntity<GlobalRes<PostWithUserRes>> show(
         @Parameter(description = "게시글 번호", example = "1") @Min(value = 1, message = "1이상 숫자만 허용합니다.") @PathVariable long id
@@ -62,7 +62,7 @@ public class PostController {
             ,CustomResponseCode.DB_ERROR
             ,CustomResponseCode.SYSTEM_ERROR
     })
-    @PreAuthorize("hasAuthority('SUPER')")
+    @PreAuthorize("hasRole('SUPER')")
     @PostMapping("/posts")
     public ResponseEntity<GlobalRes<PostWithUserRes>> store(
         @Valid @RequestBody PostStoreReq postStoreReq

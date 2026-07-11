@@ -30,7 +30,7 @@ public class SecurityAuthenticationProvider {
     private List<SimpleGrantedAuthority> getAuthorityFromClaims(Claims claims) {
         Object role = claims.get("role");
         if(role != null) {
-            return List.of(new SimpleGrantedAuthority(role.toString()));
+            return List.of(new SimpleGrantedAuthority("ROLE_" + role.toString()));
         }
 
         return List.of();
