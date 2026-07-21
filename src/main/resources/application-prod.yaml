@@ -14,6 +14,26 @@ spring:
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    # 커넥션 풀 설정
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 30000
+
+  # JPA
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: false
+        default_batch_fetch_size: 100
+    defer-datasource-initialization: true
+  sql:
+    init:
+      data-locations: classpath*:dummy/*.sql
+      mode: never
+      platform: all
 
 server:
   error:
@@ -22,29 +42,20 @@ server:
 
 # Springdoc Openapi
 springdoc:
-  # 클라이언트가 서버로 데이터를 보낼 때의 기본 형식을 지정하는 속성
   default-consumes-media-type: application/json
-  # 서버가 클라이언트로 데이터를 보낼 때의 기본 형식을 지정하는 속성
   default-produces-media-type: application/json
   swagger-ui:
-    # Swagger UI 접속 경로 설정
     path: /swagger-ui.html
-    # API 정렬 기준
     operations-sorter: alpha
   api-docs:
-    # OpenAPI 스펙을 JSON 파일로 확인할 수 있는 경로
     path: /api-docs
 
 # Log
 logging:
   file:
-    # 로그 파일 경로
     name: logs/error.log
   level:
-    # 로그 출력 레벨 설정 (trace, debug, info, warn, error)
     root: error
-
-    # 특정 패키지만 로그 출력 레벨 설정
     com.msa4spring.controllers: error
 
 # Security & JWT
@@ -64,7 +75,7 @@ security:
 
 # file
 file:
-  server-uri: ${SERVER_URI:http://localhost:8080}
+  server-uri: ${SERVER_URI}
   storage-path: /storage
   profile-path: /files/profiles
   post-path: /files/posts
