@@ -6,7 +6,7 @@ import com.msa4meerkatgram.domain.auth.responses.AuthRes;
 import com.msa4meerkatgram.domain.auth.services.AuthService;
 import com.msa4meerkatgram.global.errors.custom.InvalidTokenException;
 import com.msa4meerkatgram.global.responses.GlobalRes;
-import com.msa4meerkatgram.global.security.cookie.CookieManager;
+import com.msa4meerkatgram.global.cookie.CookieManager;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

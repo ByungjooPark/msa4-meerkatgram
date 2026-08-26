@@ -1,4 +1,4 @@
-package com.msa4meerkatgram.global.security.jwt;
+package com.msa4meerkatgram.global.jwt;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

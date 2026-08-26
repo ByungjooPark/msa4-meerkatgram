@@ -1,6 +1,6 @@
-package com.msa4meerkatgram.global.security.filter;
+package com.msa4meerkatgram.global.security;
 
-import com.msa4meerkatgram.global.security.jwt.JwtProvider;
+import com.msa4meerkatgram.global.jwt.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;

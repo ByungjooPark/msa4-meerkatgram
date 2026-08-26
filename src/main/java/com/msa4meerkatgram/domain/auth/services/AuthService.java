@@ -13,7 +13,7 @@ import com.msa4meerkatgram.global.errors.custom.InvalidTokenException;
 import com.msa4meerkatgram.global.errors.custom.NotRegisteredException;
 import com.msa4meerkatgram.global.security.constant.ProviderPolicy;
 import com.msa4meerkatgram.global.security.constant.RolePolicy;
-import com.msa4meerkatgram.global.security.jwt.JwtProvider;
+import com.msa4meerkatgram.global.jwt.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

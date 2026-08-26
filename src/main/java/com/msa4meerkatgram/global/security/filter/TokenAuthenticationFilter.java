@@ -1,6 +1,7 @@
 package com.msa4meerkatgram.global.security.filter;
 
-import com.msa4meerkatgram.global.security.jwt.JwtProvider;
+import com.msa4meerkatgram.global.jwt.JwtProvider;
+import com.msa4meerkatgram.global.security.SecurityAuthenticationProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

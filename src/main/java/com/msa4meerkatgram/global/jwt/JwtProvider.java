@@ -1,4 +1,4 @@
-package com.msa4meerkatgram.global.security.jwt;
+package com.msa4meerkatgram.global.jwt;
 
 import com.msa4meerkatgram.domain.user.entities.User;
 import com.msa4meerkatgram.global.errors.custom.InvalidTokenException;

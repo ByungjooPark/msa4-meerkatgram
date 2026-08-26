@@ -1,6 +1,6 @@
-package com.msa4meerkatgram.global.security.cookie;
+package com.msa4meerkatgram.global.cookie;
 
-import com.msa4meerkatgram.global.security.jwt.JwtConfig;
+import com.msa4meerkatgram.global.jwt.JwtConfig;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
