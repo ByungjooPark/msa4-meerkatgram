@@ -1,7 +1,9 @@
 package com.msa4meerkatgram.global.errors.custom;
 
-public class NotRegisteredException extends RuntimeException {
+import com.msa4meerkatgram.global.responses.CustomResponseCode;
+
+public class NotRegisteredException extends BusinessException {
     public NotRegisteredException(String message) {
-        super(message);
+        super(CustomResponseCode.NOT_REGISTERED_ERROR, message);
     }
 }

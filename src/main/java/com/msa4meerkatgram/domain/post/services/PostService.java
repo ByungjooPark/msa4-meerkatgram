@@ -5,7 +5,7 @@ import com.msa4meerkatgram.domain.post.mapper.PostMapper;
 import com.msa4meerkatgram.domain.post.requests.PostIndexReq;
 import com.msa4meerkatgram.domain.post.requests.PostStoreReq;
 import com.msa4meerkatgram.domain.post.responses.PostIndexRes;
-import com.msa4meerkatgram.global.errors.custom.DeletedRecordException;
+import com.msa4meerkatgram.global.errors.custom.NotFoundResourceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,7 +39,7 @@ public class PostService {
         Post post = postMapper.findByPk(id);
 
         if(post == null) {
-            throw new DeletedRecordException("이미 삭제된 게시글입니다.");
+            throw new NotFoundResourceException("이미 삭제된 게시글입니다.");
         }
 
         return post;

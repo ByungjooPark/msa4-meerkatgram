@@ -8,7 +8,7 @@ import com.msa4meerkatgram.domain.post.mapper.PostMapper;
 import com.msa4meerkatgram.domain.user.entities.User;
 import com.msa4meerkatgram.domain.user.mapper.UserMapper;
 import com.msa4meerkatgram.domain.user.responses.UserRes;
-import com.msa4meerkatgram.global.errors.custom.DuplicatedRecordException;
+import com.msa4meerkatgram.global.errors.custom.DuplicatedResourceException;
 import com.msa4meerkatgram.global.errors.custom.InvalidTokenException;
 import com.msa4meerkatgram.global.errors.custom.NotRegisteredException;
 import com.msa4meerkatgram.global.security.constant.ProviderPolicy;
@@ -153,7 +153,7 @@ public class AuthService {
         User user = userMapper.findByEmail(registrationReq.email());
 
         if(user != null) {
-            throw new DuplicatedRecordException("이미 가입된 회원입니다.");
+            throw new DuplicatedResourceException("이미 가입된 회원입니다.");
         }
 
         User newUser = new User();
