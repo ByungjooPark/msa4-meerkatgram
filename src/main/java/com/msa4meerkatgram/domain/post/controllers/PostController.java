@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +26,7 @@ public class PostController {
         return ResponseEntity.ok(GlobalRes.success(postService.index(postIndexReq)));
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/posts/{id}")
     public ResponseEntity<GlobalRes<Post>> show(
         @Min(value = 1, message = "1이상 숫자만 허용합니다.") @PathVariable long id
@@ -32,6 +34,7 @@ public class PostController {
         return ResponseEntity.ok(GlobalRes.success(postService.show(id)));
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/posts")
     public ResponseEntity<GlobalRes<Post>> store(
         @Valid @RequestBody PostStoreReq postStoreReq

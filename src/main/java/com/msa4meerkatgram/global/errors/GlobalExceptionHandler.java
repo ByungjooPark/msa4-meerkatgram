@@ -10,7 +10,9 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -47,18 +49,22 @@ public class GlobalExceptionHandler {
     // 이하 Spring에서 발생하는 Exceptions
     // ------------------------------------
 
-    // v1은 아직 Security 설정에서 URL 패턴별로 인증 여부를 판단한다(SecurityConfiguration 참고).
-    // @PreAuthorize 전환 전까지는 AuthenticationException(미인증)과 AccessDeniedException(권한부족)이
-    // 분리되어 발생하므로 핸들러도 분리해서 둔다 — v2는 @PreAuthorize만 쓰기 때문에 이 핸들러가 없다.
-    @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<GlobalRes<Void>> handle(AuthenticationException e) {
-        log.debug(CustomResponseCode.UNAUTHENTICATED_ERROR.name(), e);
-        return this.generateErrorResponse(CustomResponseCode.UNAUTHENTICATED_ERROR);
-    }
-
+    // SecurityConfiguration이 이제 URL 레벨에서는 전부 permitAll이라, 인증/인가 실패는
+    // @PreAuthorize에서만 발생한다 - 이유(미인증 vs 권한부족)와 무관하게 항상 AccessDeniedException으로
+    // 온다. 익명 사용자인지 SecurityContext로 직접 구분해서 401/403을 나눠준다.
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<GlobalRes<Void>> handle(AccessDeniedException e) {
         log.debug(CustomResponseCode.UNAUTHORIZED_ERROR.name(), e);
+
+        // 현재 로그인한 사용자의 정보를 컨텍스트에서 확인
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // 로그인하지 않은 익명 사용자가 접근한 경우 (인증 실패 - 401)
+        if (authentication instanceof AnonymousAuthenticationToken) {
+            return this.generateErrorResponse(CustomResponseCode.UNAUTHENTICATED_ERROR);
+        }
+
+        // 로그인은 했으나 권한(Role)이 부족한 경우 (인가 실패 - 403)
         return this.generateErrorResponse(CustomResponseCode.UNAUTHORIZED_ERROR);
     }
 
