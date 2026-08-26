@@ -1,8 +1,8 @@
 package com.msa4meerkatgram.domain.file.services;
 
 import com.msa4meerkatgram.domain.file.responses.FileRes;
-import com.msa4meerkatgram.global.util.file.FileConfig;
-import com.msa4meerkatgram.global.util.file.LocalFileManager;
+import com.msa4meerkatgram.global.file.FileConfig;
+import com.msa4meerkatgram.global.file.LocalFileManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;

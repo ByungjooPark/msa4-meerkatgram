@@ -1,4 +1,4 @@
-package com.msa4meerkatgram.global.util.file;
+package com.msa4meerkatgram.global.file;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

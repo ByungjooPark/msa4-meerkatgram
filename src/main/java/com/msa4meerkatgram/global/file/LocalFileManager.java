@@ -1,4 +1,4 @@
-package com.msa4meerkatgram.global.util.file;
+package com.msa4meerkatgram.global.file;
 
 import com.msa4meerkatgram.global.errors.custom.FileManagedException;
 import lombok.RequiredArgsConstructor;
