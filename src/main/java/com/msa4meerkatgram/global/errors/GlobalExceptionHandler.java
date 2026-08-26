@@ -25,12 +25,7 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     private ResponseEntity<GlobalRes<Void>> generateErrorResponse(CustomResponseCode customResponseCode) {
-        return ResponseEntity.status(customResponseCode.getHttpStatus()).body(
-            GlobalRes.<Void>builder()
-                .code(customResponseCode.getCode())
-                .message(customResponseCode.name())
-                .build()
-        );
+        return ResponseEntity.status(customResponseCode.getHttpStatus()).body(GlobalRes.from(customResponseCode));
     }
 
     /**

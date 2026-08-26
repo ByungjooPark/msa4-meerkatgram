@@ -13,17 +13,11 @@ import com.msa4meerkatgram.global.errors.custom.InvalidTokenException;
 import com.msa4meerkatgram.global.errors.custom.NotRegisteredException;
 import com.msa4meerkatgram.global.security.constant.ProviderPolicy;
 import com.msa4meerkatgram.global.security.constant.RolePolicy;
-import com.msa4meerkatgram.global.security.cookie.CookieManager;
-import com.msa4meerkatgram.global.security.jwt.JwtConfig;
 import com.msa4meerkatgram.global.security.jwt.JwtProvider;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -31,13 +25,11 @@ public class AuthService {
     private final UserMapper userMapper;
     private final JwtProvider jwtProvider;
     private final AuthMapper authMapper;
-    private final CookieManager cookieManager;
-    private final JwtConfig jwtConfig;
     private final PasswordEncoder passwordEncoder;
     private final PostMapper postMapper;
 
     @Transactional(rollbackFor = Exception.class)
-    public AuthRes login(HttpServletResponse response, LoginReq loginReq) {
+    public AuthRes login(LoginReq loginReq) {
         // 유저정보 획득
         User user = userMapper.findByEmail(loginReq.email());
 
@@ -51,19 +43,12 @@ public class AuthService {
             throw new NotRegisteredException("아이디와 비밀번호를 확인해주세요.");
         }
 
-        return this.generateAuthentication(response, user);
+        return this.generateAuthentication(user);
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public AuthRes reissue(HttpServletRequest request, HttpServletResponse response) {
-        // 리프래시 토큰 획득
-        Optional<String> refreshTokenOptional = jwtProvider.extractRefreshToken(request);
-        if(refreshTokenOptional.isEmpty()) {
-            throw new InvalidTokenException("토큰이 없습니다.");
-        }
-        String extractRefreshToken = refreshTokenOptional.get();
-
-        long id = Long.parseLong(jwtProvider.extractClaims(extractRefreshToken).getSubject());
+    public AuthRes reissue(String refreshToken) {
+        long id = Long.parseLong(jwtProvider.extractClaims(refreshToken).getSubject());
 
         // 유저 획득
         User user = userMapper.findByPk(id);
@@ -74,21 +59,20 @@ public class AuthService {
         }
 
         // 리프래시 토큰 비교
-        if(!user.getRefreshToken().equals(extractRefreshToken)) {
+        if(!user.getRefreshToken().equals(refreshToken)) {
             throw new InvalidTokenException("토큰이 일치하지 않습니다.");
         }
 
-        return this.generateAuthentication(response, user);
+        return this.generateAuthentication(user);
     }
 
 
     /**
-     * 액세스토큰 및 리프래시토큰 생성 후, 리프래시 토큰 DB&Cookie에 저장, AuthRes로 반환
-     * @param response HttpServletResponse
+     * 액세스토큰 및 리프래시토큰 생성 후, 리프래시 토큰 DB 저장, AuthRes로 반환
      * @param user 유저 Entity
      * @return AuthRes
      */
-    private AuthRes generateAuthentication(HttpServletResponse response, User user) {
+    private AuthRes generateAuthentication(User user) {
         // 작성 게시글 수 획득
         long countPosts = postMapper.countPostsByUserId(user.getId());
 
@@ -99,18 +83,10 @@ public class AuthService {
         // 리프래시 토큰을 DB 저장
         authMapper.updateRefreshToken(user.getId(), newRefreshToken);
 
-        // 리프래시 토큰을 Cookie에 저장
-        cookieManager.setCookie(
-            response
-            ,jwtConfig.refreshTokenCookieName()
-            ,newRefreshToken
-            ,jwtConfig.refreshTokenCookieExpiry()
-            ,jwtConfig.reissueUri()
-        );
-
-        // 리턴
+        // 리턴 (리프래시 토큰의 쿠키 저장은 Controller의 책임)
         return AuthRes.builder()
             .accessToken(newAccessToken)
+            .refreshToken(newRefreshToken)
             .user(
                 UserRes.builder()
                     .id(user.getId())
@@ -126,7 +102,7 @@ public class AuthService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void logout(HttpServletResponse response, long id) {
+    public void logout(long id) {
         // 유저 정보 획득
         User user = userMapper.findByPk(id);
 
@@ -134,17 +110,8 @@ public class AuthService {
             throw new InvalidTokenException("유효하지 않은 회원의 토큰입니다.");
         }
 
-        // DB에 저장한 리프래시 토큰 파기
+        // DB에 저장한 리프래시 토큰 파기 (쿠키 파기는 Controller의 책임)
         authMapper.updateRefreshToken(id, null);
-
-        // Cookie에 저장한 리프래시 토큰 파기
-        cookieManager.setCookie(
-            response
-            ,jwtConfig.refreshTokenCookieName()
-            ,null
-            ,0
-            ,jwtConfig.reissueUri()
-        );
     }
 
     @Transactional(rollbackFor = Exception.class)

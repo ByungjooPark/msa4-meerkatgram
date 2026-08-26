@@ -2,11 +2,9 @@ package com.msa4meerkatgram.global.security.jwt;
 
 import com.msa4meerkatgram.domain.user.entities.User;
 import com.msa4meerkatgram.global.errors.custom.InvalidTokenException;
-import com.msa4meerkatgram.global.security.cookie.CookieManager;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
 
@@ -18,12 +16,10 @@ import java.util.Optional;
 public class JwtProvider {
     private final JwtConfig jwtConfig;
     private final SecretKey secretKey;
-    private final CookieManager cookieManager;
 
-    public JwtProvider(JwtConfig jwtConfig, CookieManager cookieManager) {
+    public JwtProvider(JwtConfig jwtConfig) {
         this.jwtConfig = jwtConfig;
         this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtConfig.secret()));
-        this.cookieManager = cookieManager;
     }
 
     public String generateAccessToken(User user) {
@@ -48,12 +44,6 @@ public class JwtProvider {
             .claim("role", user.getRole()) // private claim 설정
             .signWith(secretKey) // 시그니처 작성
             .compact();
-    }
-
-    // 쿠키에서 리프레시 토큰 추출
-    public Optional<String> extractRefreshToken(HttpServletRequest request) {
-        return cookieManager.getCookie(request, jwtConfig.refreshTokenCookieName())
-            .map(Cookie::getValue);
     }
 
     /**

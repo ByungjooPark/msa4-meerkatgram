@@ -45,8 +45,24 @@ public class CookieManager {
         response.addCookie(cookie);
     }
 
+    /**
+     * 쿠키에서 리프레시 토큰 추출
+     * @param request 리퀘스트
+     * @return Optional 리프레시 토큰
+     */
+    public Optional<String> getRefreshTokenFromCookie(HttpServletRequest request) {
+        return this.getCookie(request, jwtConfig.refreshTokenCookieName())
+            .map(Cookie::getValue);
+    }
 
+    // 리프래시 토큰 쿠키 저장
+    public void setRefreshTokenToCookie(HttpServletResponse response, String refreshToken) {
+        this.setCookie(response, jwtConfig.refreshTokenCookieName(), refreshToken, jwtConfig.refreshTokenCookieExpiry(), jwtConfig.reissueUri());
+    }
 
-
+    // 리프래시 토큰 쿠키 파기
+    public void removeRefreshTokenToCookie(HttpServletResponse response) {
+        this.setCookie(response, jwtConfig.refreshTokenCookieName(), null, 0, jwtConfig.reissueUri());
+    }
 
 }

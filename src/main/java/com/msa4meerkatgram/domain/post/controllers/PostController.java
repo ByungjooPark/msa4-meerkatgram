@@ -22,30 +22,14 @@ public class PostController {
 
     @GetMapping("/posts")
     public ResponseEntity<GlobalRes<PostIndexRes>> index(PostIndexReq postIndexReq) {
-        PostIndexRes postIndexRes = postService.index(postIndexReq);
-
-        return ResponseEntity.status(200).body(
-            GlobalRes.<PostIndexRes>builder()
-                    .code("00")
-                    .message("정상처리")
-                    .data(postIndexRes)
-                    .build()
-        );
+        return ResponseEntity.ok(GlobalRes.success(postService.index(postIndexReq)));
     }
 
     @GetMapping("/posts/{id}")
     public ResponseEntity<GlobalRes<Post>> show(
         @Min(value = 1, message = "1이상 숫자만 허용합니다.") @PathVariable long id
     ) {
-        Post result = postService.show(id);
-
-        return ResponseEntity.status(200).body(
-            GlobalRes.<Post>builder()
-                .code("00")
-                .message("게시글 상세 정상 처리")
-                .data(result)
-                .build()
-        );
+        return ResponseEntity.ok(GlobalRes.success(postService.show(id)));
     }
 
     @PostMapping("/posts")
@@ -53,12 +37,6 @@ public class PostController {
         @Valid @RequestBody PostStoreReq postStoreReq
         , @AuthenticationPrincipal Claims claims
     ) {
-        return ResponseEntity.status(200).body(
-            GlobalRes.<Post>builder()
-                .code("00")
-                .message("게시글 작성 정상 처리")
-                .data(postService.store(Long.parseLong(claims.getSubject()), postStoreReq))
-                .build()
-        );
+        return ResponseEntity.ok(GlobalRes.success(postService.store(Long.parseLong(claims.getSubject()), postStoreReq)));
     }
 }
