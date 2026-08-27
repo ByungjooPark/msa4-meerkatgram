@@ -55,7 +55,7 @@ security:
 # file
 file:
   server-uri: ${SERVER_URI:http://localhost:8080}
-  storage-path: /storage
+  storage-path: E:/storage
   profile-path: /files/profiles
   post-path: /files/posts
   allow-extension-list: [
