@@ -15,6 +15,7 @@ public enum CustomResponseCode {
     // Not Found Resource 관련
     , NOT_FOUND_RESOURCE_ERROR(HttpStatus.NOT_FOUND, "E10")
     , DUPLICATED_RESOURCE_ERROR(HttpStatus.CONFLICT, "E11")
+    , RESOURCE_AUTHOR_MISMATCH_ERROR(HttpStatus.CONFLICT, "E12")
     // 유효성 검사 관련
     , INVALID_PARAMETER_ERROR(HttpStatus.BAD_REQUEST, "E21")
     // OAuth2 관련
