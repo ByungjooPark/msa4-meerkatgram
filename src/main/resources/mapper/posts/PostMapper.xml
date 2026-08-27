@@ -67,4 +67,15 @@
             , #{image}
         )
     </insert>
+
+    <update
+        id="destroy"
+    >
+        update posts
+        set
+            updated_at = NOW()
+            , deleted_at = NOW()
+        where
+            id = #{id}
+    </update>
 </mapper>

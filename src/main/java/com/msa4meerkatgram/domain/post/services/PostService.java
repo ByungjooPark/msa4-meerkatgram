@@ -2,10 +2,11 @@ package com.msa4meerkatgram.domain.post.services;
 
 import com.msa4meerkatgram.domain.post.entities.Post;
 import com.msa4meerkatgram.domain.post.mapper.PostMapper;
-import com.msa4meerkatgram.domain.post.requests.PostIndexReq;
-import com.msa4meerkatgram.domain.post.requests.PostStoreReq;
-import com.msa4meerkatgram.domain.post.responses.PostIndexRes;
+import com.msa4meerkatgram.domain.post.requests.PostIndexRequestDTO;
+import com.msa4meerkatgram.domain.post.requests.PostStoreRequestDTO;
+import com.msa4meerkatgram.domain.post.responses.PostIndexResponseDTO;
 import com.msa4meerkatgram.global.errors.custom.NotFoundResourceException;
+import com.msa4meerkatgram.global.errors.custom.ResourceAuthorMismatchException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,22 +18,18 @@ import java.util.List;
 public class PostService {
     private final PostMapper postMapper;
 
-    public PostIndexRes index(PostIndexReq postIndexReq) {
-        int offset = (postIndexReq.page() - 1) * postIndexReq.limit();
+    public PostIndexResponseDTO index(PostIndexRequestDTO postIndexRequestDTO) {
+        int offset = (postIndexRequestDTO.page() - 1) * postIndexRequestDTO.limit();
 
         // 특정 페이지 게시글 조회
-        List<Post> posts = postMapper.getPagination(postIndexReq.limit(), offset);
+        List<Post> posts = postMapper.getPagination(postIndexRequestDTO.limit(), offset);
 
         // 토탈 획득
         long total = postMapper.getTotal();
-        boolean lastPage = offset + postIndexReq.limit() >= total;
+        boolean isLastPage = offset + postIndexRequestDTO.limit() >= total;
 
         // 컨트롤러 전달
-        return PostIndexRes.builder()
-                .total(total)
-                .lastPage(lastPage)
-                .posts(posts)
-                .build();
+        return PostIndexResponseDTO.from(total, isLastPage, posts);
     }
 
     public Post show(long id) {
@@ -46,12 +43,12 @@ public class PostService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public Post store(long userId, PostStoreReq postStoreReq) {
+    public Post store(long userId, PostStoreRequestDTO postStoreRequestDTO) {
         // 작성 게시글 객체 생성
         Post post = Post.builder()
             .userId(userId)
-            .content(postStoreReq.content())
-            .image(postStoreReq.image())
+            .content(postStoreRequestDTO.content())
+            .image(postStoreRequestDTO.image())
             .build();
 
         // 게시글 작성 처리
@@ -59,5 +56,22 @@ public class PostService {
 
         // 새로 작성한 게시글 획득 및 반환
         return postMapper.findByPk(post.getId());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void destroy(long id, long userId) {
+        // 게시글 조회
+        Post post = postMapper.findByPk(id);
+
+        if(post == null) {
+            throw new NotFoundResourceException("이미 삭제된 게시글: " + id);
+        }
+
+        // 작성자 체크
+        if(post.getUserId() != userId) {
+            throw new ResourceAuthorMismatchException("게시글 삭제 실패: 작성자 다름");
+        }
+
+        postMapper.destroy(id);
     }
 }

@@ -12,4 +12,5 @@ public interface PostMapper {
     Post findByPk(long id);
     long countPostsByUserId(long userId);
     int store(Post post);
+    int destroy(long id);
 }

@@ -7,13 +7,12 @@ import com.msa4meerkatgram.domain.auth.responses.AuthResponseDTO;
 import com.msa4meerkatgram.domain.post.mapper.PostMapper;
 import com.msa4meerkatgram.domain.user.entities.User;
 import com.msa4meerkatgram.domain.user.mapper.UserMapper;
-import com.msa4meerkatgram.domain.user.responses.UserResponseDTO;
 import com.msa4meerkatgram.global.errors.custom.DuplicatedResourceException;
 import com.msa4meerkatgram.global.errors.custom.InvalidTokenException;
 import com.msa4meerkatgram.global.errors.custom.NotRegisteredException;
+import com.msa4meerkatgram.global.jwt.JwtProvider;
 import com.msa4meerkatgram.global.security.constant.ProviderPolicy;
 import com.msa4meerkatgram.global.security.constant.RolePolicy;
-import com.msa4meerkatgram.global.jwt.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -84,21 +83,7 @@ public class AuthService {
         authMapper.updateRefreshToken(user.getId(), newRefreshToken);
 
         // 리턴 (리프래시 토큰의 쿠키 저장은 Controller의 책임)
-        return AuthResponseDTO.builder()
-            .accessToken(newAccessToken)
-            .refreshToken(newRefreshToken)
-            .user(
-                UserResponseDTO.builder()
-                    .id(user.getId())
-                    .email(user.getEmail())
-                    .nick(user.getNick())
-                    .role(user.getRole())
-                    .profile(user.getProfile())
-                    .createdAt(user.getCreatedAt())
-                    .countPosts(countPosts)
-                    .build()
-            )
-            .build();
+        return AuthResponseDTO.from(user, newAccessToken, newRefreshToken, countPosts);
     }
 
     @Transactional(rollbackFor = Exception.class)
