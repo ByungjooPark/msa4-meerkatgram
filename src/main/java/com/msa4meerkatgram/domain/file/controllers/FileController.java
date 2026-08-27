@@ -5,6 +5,7 @@ import com.msa4meerkatgram.domain.file.services.FileService;
 import com.msa4meerkatgram.global.responses.GlobalResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,6 +25,7 @@ public class FileController {
         return ResponseEntity.ok(GlobalResponseDTO.success(fileService.storeProfile(file)));
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/files/posts")
     public ResponseEntity<GlobalResponseDTO<FileRes>> storePosts(
         @ModelAttribute MultipartFile file
