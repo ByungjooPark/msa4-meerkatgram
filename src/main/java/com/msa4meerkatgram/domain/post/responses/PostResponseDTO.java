@@ -5,16 +5,6 @@ import lombok.Builder;
 
 import java.time.LocalDateTime;
 
-/**
- * ** 직접사용 금지 **
- * Image URL의 도메인 합성을 위해 반드시 PostResponseMapper를 통해서만 사용할것
- * @param id
- * @param userId
- * @param content
- * @param image
- * @param createdAt
- * @param updatedAt
- */
 @Builder
 public record PostResponseDTO(
     Long id,
