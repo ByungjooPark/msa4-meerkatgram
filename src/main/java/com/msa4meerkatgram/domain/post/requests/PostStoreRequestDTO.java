@@ -1,6 +1,6 @@
 package com.msa4meerkatgram.domain.post.requests;
 
-public record PostStoreReq(
+public record PostStoreRequestDTO(
     String content,
     String image
 ) {

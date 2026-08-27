@@ -6,7 +6,7 @@ import lombok.Builder;
 import java.util.List;
 
 @Builder
-public record PostIndexRes(
+public record PostIndexResponseDTO(
         long total
         ,boolean lastPage
         ,List<Post> posts

@@ -2,7 +2,7 @@ package com.msa4meerkatgram.domain.file.controllers;
 
 import com.msa4meerkatgram.domain.file.responses.FileRes;
 import com.msa4meerkatgram.domain.file.services.FileService;
-import com.msa4meerkatgram.global.responses.GlobalRes;
+import com.msa4meerkatgram.global.responses.GlobalResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -18,16 +18,16 @@ public class FileController {
     private final FileService fileService;
 
     @PostMapping("/files/profiles")
-    public ResponseEntity<GlobalRes<FileRes>> storeProfile(
+    public ResponseEntity<GlobalResponseDTO<FileRes>> storeProfile(
         @ModelAttribute MultipartFile file
     ) {
-        return ResponseEntity.ok(GlobalRes.success(fileService.storeProfile(file)));
+        return ResponseEntity.ok(GlobalResponseDTO.success(fileService.storeProfile(file)));
     }
 
     @PostMapping("/files/posts")
-    public ResponseEntity<GlobalRes<FileRes>> storePosts(
+    public ResponseEntity<GlobalResponseDTO<FileRes>> storePosts(
         @ModelAttribute MultipartFile file
     ) {
-        return ResponseEntity.ok(GlobalRes.success(fileService.storePosts(file)));
+        return ResponseEntity.ok(GlobalResponseDTO.success(fileService.storePosts(file)));
     }
 }

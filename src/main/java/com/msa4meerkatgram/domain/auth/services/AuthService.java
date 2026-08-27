@@ -1,13 +1,13 @@
 package com.msa4meerkatgram.domain.auth.services;
 
 import com.msa4meerkatgram.domain.auth.mapper.AuthMapper;
-import com.msa4meerkatgram.domain.auth.requests.LoginReq;
-import com.msa4meerkatgram.domain.auth.requests.RegistrationReq;
-import com.msa4meerkatgram.domain.auth.responses.AuthRes;
+import com.msa4meerkatgram.domain.auth.requests.LoginRequestDTO;
+import com.msa4meerkatgram.domain.auth.requests.RegistrationRequestDTO;
+import com.msa4meerkatgram.domain.auth.responses.AuthResponseDTO;
 import com.msa4meerkatgram.domain.post.mapper.PostMapper;
 import com.msa4meerkatgram.domain.user.entities.User;
 import com.msa4meerkatgram.domain.user.mapper.UserMapper;
-import com.msa4meerkatgram.domain.user.responses.UserRes;
+import com.msa4meerkatgram.domain.user.responses.UserResponseDTO;
 import com.msa4meerkatgram.global.errors.custom.DuplicatedResourceException;
 import com.msa4meerkatgram.global.errors.custom.InvalidTokenException;
 import com.msa4meerkatgram.global.errors.custom.NotRegisteredException;
@@ -29,9 +29,9 @@ public class AuthService {
     private final PostMapper postMapper;
 
     @Transactional(rollbackFor = Exception.class)
-    public AuthRes login(LoginReq loginReq) {
+    public AuthResponseDTO login(LoginRequestDTO loginRequestDTO) {
         // 유저정보 획득
-        User user = userMapper.findByEmail(loginReq.email());
+        User user = userMapper.findByEmail(loginRequestDTO.email());
 
         // 유저 가입 여부 확인
         if(user == null) {
@@ -39,7 +39,7 @@ public class AuthService {
         }
 
         // 비밀번호 체크
-        if(!passwordEncoder.matches(loginReq.password(), user.getPassword())) {
+        if(!passwordEncoder.matches(loginRequestDTO.password(), user.getPassword())) {
             throw new NotRegisteredException("아이디와 비밀번호를 확인해주세요.");
         }
 
@@ -47,7 +47,7 @@ public class AuthService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public AuthRes reissue(String refreshToken) {
+    public AuthResponseDTO reissue(String refreshToken) {
         long id = Long.parseLong(jwtProvider.extractClaims(refreshToken).getSubject());
 
         // 유저 획득
@@ -70,9 +70,9 @@ public class AuthService {
     /**
      * 액세스토큰 및 리프래시토큰 생성 후, 리프래시 토큰 DB 저장, AuthRes로 반환
      * @param user 유저 Entity
-     * @return AuthRes
+     * @return AuthResponseDTO
      */
-    private AuthRes generateAuthentication(User user) {
+    private AuthResponseDTO generateAuthentication(User user) {
         // 작성 게시글 수 획득
         long countPosts = postMapper.countPostsByUserId(user.getId());
 
@@ -84,11 +84,11 @@ public class AuthService {
         authMapper.updateRefreshToken(user.getId(), newRefreshToken);
 
         // 리턴 (리프래시 토큰의 쿠키 저장은 Controller의 책임)
-        return AuthRes.builder()
+        return AuthResponseDTO.builder()
             .accessToken(newAccessToken)
             .refreshToken(newRefreshToken)
             .user(
-                UserRes.builder()
+                UserResponseDTO.builder()
                     .id(user.getId())
                     .email(user.getEmail())
                     .nick(user.getNick())
@@ -115,19 +115,19 @@ public class AuthService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void registration(RegistrationReq registrationReq) {
+    public void registration(RegistrationRequestDTO registrationRequestDTO) {
         // 유저 정보 획득
-        User user = userMapper.findByEmail(registrationReq.email());
+        User user = userMapper.findByEmail(registrationRequestDTO.email());
 
         if(user != null) {
             throw new DuplicatedResourceException("이미 가입된 회원입니다.");
         }
 
         User newUser = new User();
-        newUser.setEmail(registrationReq.email());
-        newUser.setPassword(passwordEncoder.encode(registrationReq.password()));
-        newUser.setNick(registrationReq.nick());
-        newUser.setProfile(registrationReq.profile());
+        newUser.setEmail(registrationRequestDTO.email());
+        newUser.setPassword(passwordEncoder.encode(registrationRequestDTO.password()));
+        newUser.setNick(registrationRequestDTO.nick());
+        newUser.setProfile(registrationRequestDTO.profile());
         newUser.setProvider(ProviderPolicy.NONE.getProvider());
         newUser.setRole(RolePolicy.NORMAL.getRole());
         authMapper.create(newUser);

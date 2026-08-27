@@ -1,11 +1,11 @@
 package com.msa4meerkatgram.domain.auth.controllers;
 
-import com.msa4meerkatgram.domain.auth.requests.LoginReq;
-import com.msa4meerkatgram.domain.auth.requests.RegistrationReq;
-import com.msa4meerkatgram.domain.auth.responses.AuthRes;
+import com.msa4meerkatgram.domain.auth.requests.LoginRequestDTO;
+import com.msa4meerkatgram.domain.auth.requests.RegistrationRequestDTO;
+import com.msa4meerkatgram.domain.auth.responses.AuthResponseDTO;
 import com.msa4meerkatgram.domain.auth.services.AuthService;
 import com.msa4meerkatgram.global.errors.custom.InvalidTokenException;
-import com.msa4meerkatgram.global.responses.GlobalRes;
+import com.msa4meerkatgram.global.responses.GlobalResponseDTO;
 import com.msa4meerkatgram.global.cookie.CookieManager;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,18 +28,18 @@ public class AuthController {
     private final CookieManager cookieManager;
 
     @PostMapping("/login")
-    public ResponseEntity<GlobalRes<AuthRes>> login(
-        @Valid @RequestBody LoginReq loginReq
+    public ResponseEntity<GlobalResponseDTO<AuthResponseDTO>> login(
+        @Valid @RequestBody LoginRequestDTO loginRequestDTO
         , HttpServletResponse response
     ) {
-        AuthRes result = authService.login(loginReq);
+        AuthResponseDTO result = authService.login(loginRequestDTO);
         cookieManager.setRefreshTokenToCookie(response, result.refreshToken());
 
-        return ResponseEntity.ok(GlobalRes.success(result));
+        return ResponseEntity.ok(GlobalResponseDTO.success(result));
     }
 
     @PostMapping("/reissue-token")
-    public ResponseEntity<GlobalRes<AuthRes>> reissue(
+    public ResponseEntity<GlobalResponseDTO<AuthResponseDTO>> reissue(
         HttpServletRequest request
         ,HttpServletResponse response
     ) {
@@ -47,30 +47,30 @@ public class AuthController {
         String refreshToken = cookieManager.getRefreshTokenFromCookie(request)
             .orElseThrow(() -> new InvalidTokenException("토큰이 없습니다."));
 
-        AuthRes result = authService.reissue(refreshToken);
+        AuthResponseDTO result = authService.reissue(refreshToken);
         cookieManager.setRefreshTokenToCookie(response, result.refreshToken());
 
-        return ResponseEntity.ok(GlobalRes.success(result));
+        return ResponseEntity.ok(GlobalResponseDTO.success(result));
     }
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/logout")
-    public ResponseEntity<GlobalRes<Void>> logout(
+    public ResponseEntity<GlobalResponseDTO<Void>> logout(
         HttpServletResponse response
         , @AuthenticationPrincipal Claims claims
     ) {
         authService.logout(Long.parseLong(claims.getSubject()));
         cookieManager.removeRefreshTokenToCookie(response);
 
-        return ResponseEntity.ok(GlobalRes.success());
+        return ResponseEntity.ok(GlobalResponseDTO.success());
     }
 
     @PostMapping("/registration")
-    public ResponseEntity<GlobalRes<Void>> registration(
-        @Valid @RequestBody RegistrationReq registrationReq
+    public ResponseEntity<GlobalResponseDTO<Void>> registration(
+        @Valid @RequestBody RegistrationRequestDTO registrationRequestDTO
         ) {
-        authService.registration(registrationReq);
+        authService.registration(registrationRequestDTO);
 
-        return ResponseEntity.ok(GlobalRes.success());
+        return ResponseEntity.ok(GlobalResponseDTO.success());
     }
 }
