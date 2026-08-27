@@ -14,11 +14,10 @@ spring:
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
-
-server:
-  error:
-    include-stacktrace: never
-    include-message: never
+  web:
+    error:
+      include-stacktrace: never
+      include-message: never
 
 # MyBatis
 mybatis:
